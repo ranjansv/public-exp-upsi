@@ -11,7 +11,7 @@ class Writer {
   size_t local_size;
 
 public:
-  Writer(adios2::IO, size_t);
+  Writer(adios2::IO, int, int, size_t);
   void open(const std::string &fname);
   void write(int step);
   void close();
