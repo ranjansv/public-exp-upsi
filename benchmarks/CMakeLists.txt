@@ -4,14 +4,10 @@ project(benchmark C CXX)
 find_package(MPI REQUIRED)
 find_package(ADIOS2 REQUIRED)
 #...
-add_executable(hello hello-world.cpp)
-add_executable(hello-hl hello-world-hl.cpp)
-#add_executable(writer writer.cpp)
-target_link_libraries(hello PRIVATE adios2::cxx11_mpi MPI::MPI_C)
-target_link_libraries(hello-hl PRIVATE adios2::cxx11_mpi MPI::MPI_C)
-#target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C)
+add_executable(writer writer.cpp)
+target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C)
 
 set(CMAKE_INSTALL_BINDIR /home/ranjan/next-project/exp-upsi/benchmarks/bin)
 
-install(TARGETS hello hello-hl 
+install(TARGETS writer
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}) 
