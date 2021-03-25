@@ -20,7 +20,7 @@ do
 
         for ENG_TYPE in $ENGINE
         do
-             AVG_TOTAL_WRITE_TIME=`ls -1 $RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb/writer*.log|xargs -L 1 tail -1|awk -F '\t' '{print $4}'| awk 'BEGIN{sum=0;} {sum+=$1} END{printf "%.2f\n", sum/NR/1000;}'`
+             AVG_TOTAL_WRITE_TIME=`ls -1 $RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb/writer*.log|xargs -L 1 tail -1|awk -F '\t' '{print $4}'| awk 'BEGIN{sum=0;} {sum+=$1} END{printf "%.f\n", sum/NR/1000;}'`
             echo -n ",$AVG_TOTAL_WRITE_TIME" >> $OUTPUT_FILE
         done
         echo "" >> $OUTPUT_FILE
