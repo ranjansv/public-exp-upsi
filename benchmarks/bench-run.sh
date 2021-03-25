@@ -12,6 +12,8 @@ RESULT_DIR="results/$TIMESTAMP"
 mkdir -p $RESULT_DIR
 
 mount|grep dax > $RESULT_DIR/fs-type.log
+git branch --show-current > git branch --show-current
+git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
