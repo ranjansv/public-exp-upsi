@@ -10,12 +10,13 @@ do
     #Setup outfile for recording average total write time   
     mkdir -p $RESULT_DIR/csv/ 
     OUTPUT_FILE="${RESULT_DIR}/csv/writetime-${NR}ranks.csv"
-    echo "datasize,$ENGINE" > $OUTPUT_FILE
+    echo "totaldataperank,$ENGINE" > $OUTPUT_FILE
     sed -i 's/\s/,/g' $OUTPUT_FILE
 
     for DATASIZE in $GLOBAL_ARRAYSIZE_GB
     do
-        echo -n "$DATASIZE" >> $OUTPUT_FILE
+	TOTAL_DATA_PER_RANK=`echo "scale=2; ($DATASIZE * $STEPS)/$NR" | bc`
+        echo -n "$TOTAL_DATA_PER_RANK" >> $OUTPUT_FILE
 
         for ENG_TYPE in $ENGINE
         do
