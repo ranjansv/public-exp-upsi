@@ -11,6 +11,8 @@ TIMESTAMP=`echo $(date +%Y-%m-%d-%H:%M:%S)`
 RESULT_DIR="results/$TIMESTAMP"
 mkdir -p $RESULT_DIR
 
+mount|grep dax > $RESULT_DIR/fs-type.log
+
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 cp ./adios2.xml $RESULT_DIR
