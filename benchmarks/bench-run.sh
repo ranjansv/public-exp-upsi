@@ -53,7 +53,7 @@ do
             echo "Processing ${NR}ranks, ${ENG_TYPE}writers, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
             GLOBAL_ARRAY_SIZE=`echo "scale=0; ($DATASIZE * $NR)/$STEPS/1024" | bc`
-	    echo "global array size: $GLOBAL_ARRAY_SIZE"
+	    echo "global array size: ${GLOBAL_ARRAY_SIZE}GB"
 
 	    rm -rf /mnt/pmem1/output.bp &> /dev/null
 
