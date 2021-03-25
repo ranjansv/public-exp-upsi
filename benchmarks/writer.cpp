@@ -7,8 +7,8 @@
 #include <adios2.h>
 #include <mpi.h>
 
-#include "writer.h"
 #include "timer.hpp"
+#include "writer.h"
 
 #define GB_in_bytes 1073741824
 
@@ -45,7 +45,7 @@ void Writer::close() { writer.Close(); }
 int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
-  std::string config_file = std::string(argv[1]);
+  std::string engine_type = std::string(argv[1]);
   size_t arr_size_gb = std::stoi(argv[2]);
   int steps = std::stoi(argv[3]);
 
@@ -60,16 +60,19 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(comm, &procs);
 
   if (rank == 0) {
-    std::cout << "adios config file: " << config_file << std::endl;
+    std::cout << "engine_type: " << engine_type << std::endl;
     std::cout << "arr_size_gb: " << arr_size_gb << std::endl;
     std::cout << "steps: " << steps << std::endl;
   }
   try {
-    adios2::ADIOS adios(config_file, MPI_COMM_WORLD);
-    adios2::IO io = adios.DeclareIO("Writers");
+    adios2::ADIOS adios("./adios2.xml", MPI_COMM_WORLD);
+    adios2::IO io = adios.DeclareIO(engine_type + "-writers");
     Writer writer_obj(io, rank, procs, arr_size_gb);
 
-    writer_obj.open("/mnt/pmem1/output.bp");
+    if (engine_type == "bp4")
+      writer_obj.open("/mnt/pmem1/output.bp");
+    else if (engine_type == "sst")
+      writer_obj.open("output.bp");
 #ifdef ENABLE_TIMERS
     Timer timer_total;
     Timer timer_compute;
