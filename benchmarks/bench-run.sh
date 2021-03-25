@@ -41,17 +41,24 @@ else
        reader_lastcpu=$(( $reader_firstcpu + ${thr} - 1))
 fi
 
-for DATASIZE in $GLOBAL_ARRAYSIZE_GB
+for NR in $PROCS
 do
-    mkdir -p $RESULT_DIR/${DATASIZE}gb/console/
+    mkdir -p $RESULT_DIR/${NR}ranks/console
     for ENG_TYPE in $ENGINE
     do
-        for NR in $PROCS
+        for DATASIZE in $TOTAL_DATA_PER_RANK
         do
-            echo "Processing ${DATASIZE}gb, ${ENG_TYPE}writers, ${NR} ranks"
-	    OUTPUT_DIR="$RESULT_DIR/${DATASIZE}gb/${ENG_TYPE}writers/${NR}ranks/"
+            echo "Processing ${NR}ranks, ${ENG_TYPE}writers, ${DATASIZE}mb"
+            #Choose PROCS and STEPS so that global array size is a whole numebr
+            GLOBAL_ARRAY_SIZE=`echo "scale=0; ($DATASIZE * $NR)/$STEPS/1024" | bc`
+	    echo "global array size: $GLOBAL_ARRAY_SIZE"
+
+	    rm -rf /mnt/pmem1/output.bp &> /dev/null
+
+
+	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-            mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $DATASIZE $STEPS &>> $RESULT_DIR/${DATASIZE}gb/console/stdout-${ENG_TYPE}writers-${DATASIZE}gb-${NR}ranks.log
+            mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
             mv writer*.log $OUTPUT_DIR/
         done
     done
