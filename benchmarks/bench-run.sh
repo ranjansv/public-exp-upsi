@@ -65,7 +65,7 @@ do
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-            mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
+            perf stat -d -d -d mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
             mv writer*.log $OUTPUT_DIR/
         done
     done
