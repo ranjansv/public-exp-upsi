@@ -15,6 +15,11 @@ mount|grep dax > $RESULT_DIR/fs-type.log
 git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
+#Build source
+cd build
+make
+cd ..
+
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 cp ./adios2.xml $RESULT_DIR
@@ -52,7 +57,7 @@ do
         do
             echo "Processing ${NR}ranks, ${ENG_TYPE}writers, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
-            GLOBAL_ARRAY_SIZE=`echo "scale=0; ($DATASIZE * $NR)/$STEPS/1024" | bc`
+            GLOBAL_ARRAY_SIZE=`echo "scale=0; ($DATASIZE * $NR)/$STEPS" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
 	    rm -rf /mnt/pmem1/output.bp &> /dev/null

@@ -10,14 +10,14 @@
 #include "timer.hpp"
 #include "writer.h"
 
-#define GB_in_bytes 1073741824
+#define MB_in_bytes 1048576
 
 #define ENABLE_TIMERS
 
-Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_gb)
+Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb)
     : io(io) {
 
-  global_array_size = arr_size_gb * GB_in_bytes / sizeof(double);
+  global_array_size = arr_size_mb * MB_in_bytes / sizeof(double);
   local_size = global_array_size / procs;
   offset = rank * local_size;
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
-  size_t arr_size_gb = std::stoi(argv[2]);
+  size_t arr_size_mb = std::stoi(argv[2]);
   int steps = std::stoi(argv[3]);
 
   int rank, procs, wrank;
@@ -61,13 +61,13 @@ int main(int argc, char *argv[]) {
 
   if (rank == 0) {
     std::cout << "engine_type: " << engine_type << std::endl;
-    std::cout << "arr_size_gb: " << arr_size_gb << std::endl;
+    std::cout << "arr_size_mb: " << arr_size_mb << std::endl;
     std::cout << "steps: " << steps << std::endl;
   }
   try {
     adios2::ADIOS adios("./adios2.xml", MPI_COMM_WORLD);
     adios2::IO io = adios.DeclareIO(engine_type + "-writers");
-    Writer writer_obj(io, rank, procs, arr_size_gb);
+    Writer writer_obj(io, rank, procs, arr_size_mb);
 
     if (engine_type == "bp4")
       writer_obj.open("/mnt/pmem1/output.bp");
