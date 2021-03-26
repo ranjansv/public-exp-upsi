@@ -66,13 +66,29 @@ int main(int argc, char *argv[]) {
   }
   try {
     adios2::ADIOS adios("./adios2.xml", MPI_COMM_WORLD);
-    adios2::IO io = adios.DeclareIO(engine_type + "-writers");
-    Writer writer_obj(io, rank, procs, arr_size_mb);
+    adios2::IO io_bp4 = adios.DeclareIO("bp4-writers");
+    adios2::IO io_sst = adios.DeclareIO("sst-writers");
+    Writer writer_bp4(io_bp4, rank, procs, arr_size_mb);
+    Writer writer_sst(io_sst, rank, procs, arr_size_mb);
 
-    if (engine_type == "bp4")
-      writer_obj.open("/mnt/pmem1/output.bp");
-    else if (engine_type == "sst")
-      writer_obj.open("output.bp");
+    bool flag_bp4 = false;
+    bool flag_sst = false;
+
+
+    if (engine_type == "bp4") {
+      writer_bp4.open("/mnt/pmem1/output.bp");
+      flag_bp4 = true;
+    }
+    else if (engine_type == "sst") {
+      writer_sst.open("output.bp");
+      flag_sst = true;
+    }
+    else if (engine_type == "bp4-sst") {
+      writer_bp4.open("/mnt/pmem1/output.bp");
+      flag_bp4 = true;
+      writer_sst.open("output.bp");
+      flag_sst = true;
+    }
 #ifdef ENABLE_TIMERS
     Timer timer_total;
     Timer timer_compute;
@@ -100,8 +116,10 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(comm);
       timer_write.start();
 #endif
-
-      writer_obj.write(steps);
+      if(flag_bp4 == true)
+      	writer_bp4.write(steps);
+      if(flag_sst == true)
+      writer_sst.write(steps);
 
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();
@@ -113,7 +131,10 @@ int main(int argc, char *argv[]) {
 #endif
     }
 
-    writer_obj.close();
+    if(flag_bp4 == true)
+    	writer_bp4.close();
+    if(flag_sst == true)
+    	writer_sst.close();
 
 #ifdef ENABLE_TIMERS
     log << "total\t" << timer_total.elapsed() << "\t" << timer_compute.elapsed()

@@ -1,4 +1,4 @@
-ENGINE="bp4 sst"
+ENGINE="bp4 sst bp4-sst"
 TOTAL_DATA_PER_RANK="512 1024 2048"
 STEPS=8
 PROCS="8"
