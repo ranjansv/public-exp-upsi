@@ -1,0 +1,12 @@
+#ranks	total_data_per_rank total_data_all_ranks        steps    global_array_size
+8	0.5gb		   	 4gb			   8	      0.5gb
+8	1gb		   	 8gb			   8          1gb
+8       2gb                	 16gb		           8          2gb
+
+16	0.5gb		   	 8gb			   8          1gb
+16	1gb		   	 16gb		           8          2gb
+16      2gb                	 32gb		           8	      4gb
+
+24	0.5gb		   	 12gb		           8          1.5gb
+24      1gb                	 24gb		           8	      3gb
+24      2gb                	 48gb		           8	      6gb
