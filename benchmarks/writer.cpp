@@ -31,8 +31,11 @@ void Writer::open(const std::string &fname) {
   writer = io.Open(fname, adios2::Mode::Write);
 }
 
-void Writer::write(int step) {
-  std::vector<double> u(local_size, (double)step);
+int Writer::getlocalsize() {
+	return local_size;
+}
+
+void Writer::write(int step, std::vector<double>& u) {
 
   writer.BeginStep();
   writer.Put<int>(var_step, &step);
@@ -74,6 +77,8 @@ int main(int argc, char *argv[]) {
     bool flag_bp4 = false;
     bool flag_sst = false;
 
+    int localsize = writer_bp4.getlocalsize();
+
 
     if (engine_type == "bp4") {
       writer_bp4.open("/mnt/pmem1/output.bp");
@@ -83,7 +88,7 @@ int main(int argc, char *argv[]) {
       writer_sst.open("output.bp");
       flag_sst = true;
     }
-    else if (engine_type == "bp4-sst") {
+    else if (engine_type == "bp4+sst") {
       writer_bp4.open("/mnt/pmem1/output.bp");
       flag_bp4 = true;
       writer_sst.open("output.bp");
@@ -100,6 +105,7 @@ int main(int argc, char *argv[]) {
     std::ofstream log(log_fname.str());
     log << "step\ttotal\tcompute\twrite" << std::endl;
 #endif
+      std::vector<double> u(localsize,0);
 
     for (int i = 0; i < steps; i++) {
 #ifdef ENABLE_TIMERS
@@ -117,9 +123,9 @@ int main(int argc, char *argv[]) {
       timer_write.start();
 #endif
       if(flag_bp4 == true)
-      	writer_bp4.write(steps);
+      	writer_bp4.write(steps,u);
       if(flag_sst == true)
-      writer_sst.write(steps);
+      writer_sst.write(steps,u);
 
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();

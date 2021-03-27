@@ -12,7 +12,8 @@ class Writer {
 
 public:
   Writer(adios2::IO, int, int, size_t);
+  int getlocalsize();
   void open(const std::string &fname);
-  void write(int step);
+  void write(int step, std::vector<double>&);
   void close();
 };
