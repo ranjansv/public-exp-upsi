@@ -57,7 +57,7 @@ do
         do
             echo "Processing ${NR}ranks, ${ENG_TYPE}writers, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
-            GLOBAL_ARRAY_SIZE=`echo "scale=0; ($DATASIZE * $NR)/$STEPS" | bc`
+	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
 	    rm -rf /mnt/pmem1/output.bp &> /dev/null
@@ -65,7 +65,7 @@ do
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-            numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
+            perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
             #perf stat -d -d -d mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
             mv writer*.log $OUTPUT_DIR/
         done

@@ -98,12 +98,14 @@ int main(int argc, char *argv[]) {
     Timer timer_total;
     Timer timer_compute;
     Timer timer_write;
+    Timer timer_bp4;
+    Timer timer_sst;
 
     std::ostringstream log_fname;
     log_fname << "writer-" << rank << ".log";
 
     std::ofstream log(log_fname.str());
-    log << "step\ttotal\tcompute\twrite" << std::endl;
+    log << "step\ttotal\tcompute\twrite\twrite_bp4\twrite_sst" << std::endl;
 #endif
       std::vector<double> u(localsize,0);
 
@@ -122,10 +124,15 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(comm);
       timer_write.start();
 #endif
+      timer_sst.start();
+      if(flag_sst == true)
+        writer_sst.write(steps,u);
+      double time_sst = timer_sst.stop();
+
+      timer_bp4.start();
       if(flag_bp4 == true)
       	writer_bp4.write(steps,u);
-      if(flag_sst == true)
-      writer_sst.write(steps,u);
+      double time_bp4 = timer_bp4.stop();
 
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();
@@ -133,7 +140,7 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(comm);
 
       log << i << "\t" << time_step << "\t" << time_compute << "\t"
-          << time_write << std::endl;
+          << time_write << "\t" << time_bp4 << "\t" << time_sst << std::endl;
 #endif
     }
 
@@ -144,7 +151,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef ENABLE_TIMERS
     log << "total\t" << timer_total.elapsed() << "\t" << timer_compute.elapsed()
-        << "\t" << timer_write.elapsed() << std::endl;
+        << "\t" << timer_write.elapsed() << "\t" << timer_bp4.elapsed() << "\t" << timer_sst.elapsed() << std::endl;
 
     log.close();
 #endif
