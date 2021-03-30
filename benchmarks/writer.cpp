@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
     std::cout << "steps: " << steps << std::endl;
   }
   try {
-    adios2::ADIOS adios("./adios2.xml", MPI_COMM_WORLD);
+    adios2::ADIOS adios("./adios2.xml", comm);
     adios2::IO io_bp4 = adios.DeclareIO("bp4-writers");
     adios2::IO io_sst = adios.DeclareIO("sst-writers");
     Writer writer_bp4(io_bp4, rank, procs, arr_size_mb);
