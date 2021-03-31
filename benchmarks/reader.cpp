@@ -10,6 +10,8 @@
 
 #include "timer.hpp"
 
+#define ENABLE_TIMERS
+
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
@@ -33,6 +35,7 @@ int main(int argc, char *argv[]) {
 
   // Declare variables
   std::vector<double> u;
+  int step;
   adios2::Variable<double> var_u_in;
   adios2::Variable<int> var_step_in;
 
@@ -48,7 +51,25 @@ int main(int argc, char *argv[]) {
   // Perform Reads
   std::vector<std::size_t> shape;
 
+#ifdef ENABLE_TIMERS
+  Timer timer_total;
+  Timer timer_read;
+  Timer timer_compute;
+  Timer timer_write;
+
+  std::ostringstream log_fname;
+  log_fname << "reader-" << rank << ".log";
+
+  std::ofstream log(log_fname.str());
+  log << "step\ttotal\tread\tcompute\twrite" << std::endl;
+#endif
+
   while (true) {
+#ifdef ENABLE_TIMERS
+    MPI_Barrier(comm);
+    timer_total.start();
+    timer_read.start();
+#endif
     // Begin step
     adios2::StepStatus read_status =
         reader.BeginStep(adios2::StepMode::Read, 10.0f);
@@ -60,14 +81,13 @@ int main(int argc, char *argv[]) {
       break;
     }
 
-    int stepSimOut = reader.CurrentStep();
-
     // Inquire variable and set the selection at the first step only
     // This assumes that the variable dimensions do not change across
     // timesteps
 
     // Inquire variable
     var_u_in = reader_io.InquireVariable<double>("U");
+    var_step_in = reader_io.InquireVariable<int>("step");
 
     shape = var_u_in.Shape();
 
@@ -81,12 +101,23 @@ int main(int argc, char *argv[]) {
     var_u_in.SetSelection(adios2::Box<adios2::Dims>({offset}, {count}));
 
     reader.Get<double>(var_u_in, u);
+    reader.Get<int>(var_step_in, step);
 
     reader.EndStep();
+#ifdef ENABLE_TIMERS
+    double time_read = timer_read.stop();
+    double time_step = timer_total.stop();
+    MPI_Barrier(comm);
+
+    log << step << "\t" << time_step << "\t" << time_read << "\t" << std::endl;
+    //<< time_compute << "\t" << time_write << std::endl;
+#endif
   }
 
   // cleanup
   reader.Close();
+
+  MPI_Finalize();
 
   return 0;
 }

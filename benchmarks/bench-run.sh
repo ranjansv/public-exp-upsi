@@ -24,6 +24,12 @@ cd ..
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 cp ./adios2.xml $RESULT_DIR
 
+if [ $WRITER_NUMA == $READER_NUMA ]; 
+then   
+	echo "Both writers and readers are placed on the same socket" > $RESULT_DIR/error.log
+	exit 1
+fi
+
 if [ $WRITER_NUMA == "local" ];
 then
         writer_firstcpu=28
@@ -38,11 +44,6 @@ else
         reader_firstcpu=0
 fi
 
-if [ $WRITER_NUMA == $READER_NUMA ]; 
-then   
-	echo "Both writers and readers are placed on the same socket"
-	exit 1
-fi
 
 #if [ $WRITER_NUMA == "local" ] && [ $READER_NUMA == "local" ];
 #then   
