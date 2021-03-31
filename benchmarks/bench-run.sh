@@ -38,18 +38,23 @@ else
         reader_firstcpu=0
 fi
 
-writer_lastcpu=$(( $writer_firstcpu + ${thr} - 1))
-
-if [ $WRITER_NUMA == "local" ] && [ $READER_NUMA == "local" ];
+if [ $WRITER_NUMA == $READER_NUMA ]; 
 then   
-       reader_lastcpu=55
-       reader_firstcpu=$(( $reader_lastcpu - $thr + 1))
-else   
-       reader_lastcpu=$(( $reader_firstcpu + ${thr} - 1))
+	echo "Both writers and readers are placed on the same socket"
+	exit 1
 fi
+
+#if [ $WRITER_NUMA == "local" ] && [ $READER_NUMA == "local" ];
+#then   
+#       reader_lastcpu=55
+#       reader_firstcpu=$(( $reader_lastcpu - $thr + 1))
+#else   
+#       reader_lastcpu=$(( $reader_firstcpu + ${thr} - 1))
+#fi
 
 for NR in $PROCS
 do
+    writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
     mkdir -p $RESULT_DIR/${NR}ranks/console
     for ENG_TYPE in $ENGINE
     do
