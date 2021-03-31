@@ -2,6 +2,7 @@
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <thread>
 #include <vector>
 
 #include <adios2.h>
@@ -28,15 +29,64 @@ int main(int argc, char *argv[]) {
   adios2::ADIOS ad("adios2.xml", comm);
 
   // Open IO instance
-  adios2::IO reader_io = ad.DeclareIO("SimulationOutput");
+  adios2::IO reader_io = ad.DeclareIO(engine_type + "-writers");
 
   // Declare variables
+  std::vector<double> u;
+  adios2::Variable<double> var_u_in;
+  adios2::Variable<int> var_step_in;
 
   // Open Engine
+  std::string filename;
+  if (engine_type == "bp4")
+    filename = "/mnt/pmem1/output.bp";
+  else if (engine_type == "sst")
+    filename = "output.bp";
+
+  adios2::Engine reader = reader_io.Open(filename, adios2::Mode::Read, comm);
 
   // Perform Reads
+  std::vector<std::size_t> shape;
+
   while (true) {
+    // Begin step
+    adios2::StepStatus read_status =
+        reader.BeginStep(adios2::StepMode::Read, 10.0f);
+    if (read_status == adios2::StepStatus::NotReady) {
+      // std::cout << "Stream not ready yet. Waiting...\n";
+      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+      continue;
+    } else if (read_status != adios2::StepStatus::OK) {
+      break;
+    }
+
+    int stepSimOut = reader.CurrentStep();
+
+    // Inquire variable and set the selection at the first step only
+    // This assumes that the variable dimensions do not change across
+    // timesteps
+
+    // Inquire variable
+    var_u_in = reader_io.InquireVariable<double>("U");
+
+    shape = var_u_in.Shape();
+
+    size_t count = shape[0] / comm_size;
+    size_t offset = count * rank;
+
+    if (rank == comm_size - 1)
+      count = shape[0] - count * (comm_size - 1);
+
+    // Set selection
+    var_u_in.SetSelection(adios2::Box<adios2::Dims>({offset}, {count}));
+
+    reader.Get<double>(var_u_in, u);
+
+    reader.EndStep();
   }
+
+  // cleanup
+  reader.Close();
 
   return 0;
 }
