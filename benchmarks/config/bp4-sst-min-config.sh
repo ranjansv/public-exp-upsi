@@ -1,5 +1,5 @@
 BENCH_TYPE="workflow"
-ENGINE="bp4 sst"
+ENGINE="bp4 sst bp4+sst"
 TOTAL_DATA_PER_RANK="512"
 STEPS=8
 #Ratio of reader to writer ranks is 1:4

@@ -56,7 +56,6 @@ fi
 for NR in $PROCS
 do
     writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
-    mkdir -p $RESULT_DIR/${NR}ranks/console
     for ENG_TYPE in $ENGINE
     do
         for DATASIZE in $TOTAL_DATA_PER_RANK
@@ -71,13 +70,38 @@ do
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-            perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
-            #perf stat -d -d -d mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $RESULT_DIR/${NR}ranks/console/stdout-${NR}ranks-${ENG_TYPE}writers-${DATASIZE}mb.log
-            mv writer*.log $OUTPUT_DIR/
+
+	    if [ $BENCH_TYPE == "writer" ]
+	    then
+               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+
+               mv writer*.log $OUTPUT_DIR/
+
+	    elif [ $BENCH_TYPE == "workflow" ]
+	    then
+
+	       NR_READERS=`echo "scale=0; $NR/4" | bc`
+	       reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
+
+	       if [ $ENG_TYPE == "bp4+sst" ]
+	       then
+	           ENG_TYPE_READERS="sst"
+               else
+	           ENG_TYPE_READERS=$ENG_TYPE
+	       fi
+
+	       START_TIME=$SECONDS
+               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE_READERS $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+	       ELAPSED_TIME=$(($SECONDS - $START_TIME))
+
+               mv writer*.log $OUTPUT_DIR/
+               mv reader*.log $OUTPUT_DIR/
+	       echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+	    fi
         done
     done
 done
-
 
 ./parse-result.sh $RESULT_DIR
 

@@ -61,7 +61,8 @@ int main(int argc, char *argv[]) {
   log_fname << "reader-" << rank << ".log";
 
   std::ofstream log(log_fname.str());
-  log << "step\ttotal\tread\tcompute\twrite" << std::endl;
+  log << "step\ttotal\tread" << std::endl;
+  //log << "step\ttotal\tread\tcompute\twrite" << std::endl;
 #endif
 
   while (true) {
@@ -113,6 +114,12 @@ int main(int argc, char *argv[]) {
     //<< time_compute << "\t" << time_write << std::endl;
 #endif
   }
+#ifdef ENABLE_TIMERS
+    log << "total\t" << timer_total.elapsed() << "\t" << timer_read.elapsed()
+        << std::endl;
+
+    log.close();
+#endif
 
   // cleanup
   reader.Close();
