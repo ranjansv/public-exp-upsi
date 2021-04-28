@@ -26,6 +26,8 @@ MPI_Comm comm;
 /** Name of the process set associated with the DAOS server */
 #define	DSS_PSETID	 "daos_tier0"
 
+#define MB_in_bytes    1048576
+
 /** Event queue */
 daos_handle_t	eq;
 
@@ -52,9 +54,6 @@ d_iov_t                  glob = { NULL, 0, 0 };          /* Shared file system h
  * of an request in flight before sending a new one.
  * The actual data written in the array is the epoch number.
  */
-#define TEST_ARRAY_SIZE	1000000000 /* 1B entries * 8-byte entry bits =  8GB */
-#define SLICE_SIZE	10000	   /* size of an array slice, 10K entries */
-#define ITER_NR		10	   /* number of global iteration */
 #define	MAX_IOREQS	1	   /* number of concurrent i/o reqs in flight */
 
 /** an i/o request in flight */
@@ -66,11 +65,9 @@ struct io_req {
 	daos_event_t	ev;
 };
 
-/** a single akey is used in this example and is set to the string "data" */
-char astr[] = "data";
 
 /** data buffer */
-uint64_t data[SLICE_SIZE];
+char *data;
 
 #define FAIL(fmt, ...)						\
 do {								\
@@ -124,22 +121,23 @@ pool_destroy(void)
 }
 
 static inline void
-ioreqs_init(struct io_req *reqs) {
+ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
 	int rc;
 	int j;
+
 
 	for (j = 0; j < MAX_IOREQS; j++) {
 		struct io_req	*req = &reqs[j];
 
 		/** initialize event */
-		rc = daos_event_init(&req->ev, eq, NULL);
-		ASSERT(rc == 0, "event init failed with %d", rc);
+		//rc = daos_event_init(&req->ev, eq, NULL);
+		//ASSERT(rc == 0, "event init failed with %d", rc);
 
 		/** initialize scatter/gather */
 		req->iov = (d_iov_t) {
-			.iov_buf	= &data,
-			.iov_buf_len	= SLICE_SIZE * sizeof(data[0]),
-			.iov_len	= SLICE_SIZE * sizeof(data[0]),
+			.iov_buf	= data,
+			.iov_buf_len	= data_per_rank * sizeof(data[0]),
+			.iov_len	= data_per_rank * sizeof(data[0]),
 		};
 		req->sg.sg_nr		= 1;
 		req->sg.sg_iovs		= &req->iov;
@@ -147,7 +145,7 @@ ioreqs_init(struct io_req *reqs) {
 }
 
 void
-array(void)
+array(size_t arr_size_mb, int steps)
 {
 	daos_handle_t	 oh;
 	struct io_req	*reqs;
@@ -158,10 +156,14 @@ array(void)
 	daos_off_t      off;  /* Offset into the file to write to */
 
 
+	size_t data_per_rank = arr_size_mb * MB_in_bytes / procs;
+
+
 	/** allocate and initialize I/O requests */
+	D_ALLOC_ARRAY(data, data_per_rank);
 	D_ALLOC_ARRAY(reqs, MAX_IOREQS);
 	ASSERT(reqs != NULL, "malloc of reqs failed");
-	ioreqs_init(reqs);
+	ioreqs_init(reqs, data_per_rank);
 
 	char filename[20];
 
@@ -174,20 +176,22 @@ array(void)
 	off = 0;
 
 	/** Transactional overwrite of the array at each iteration */
-	for (iter = 0; iter < ITER_NR; iter++) {
+	for (iter = 0; iter < steps; iter++) {
 	    
 	    dfs_write(dfs, obj, &reqs[0].sg, off, NULL);
-	    off += SLICE_SIZE;
+	    off += data_per_rank;
 
 	    MPI_Barrier(comm);
 	    if(rank == 0) {
 		epoch++;
+		off = 0;
 	        daos_cont_create_snap(coh, &epoch, NULL, NULL);
 	    }
 	    MPI_Barrier(comm);
 	}
 
 	D_FREE(reqs);
+	D_FREE(data);
 }
 
 
@@ -259,30 +263,9 @@ main(int argc, char **argv)
 	/** share container handle with peer tasks */
 	handle_share(&coh, HANDLE_CO, rank, poh, 1);
 
-
-//	if (rank == 0) {
-//		struct daos_oclass_attr	cattr = {
-//			.ca_schema		= DAOS_OS_STRIPED,
-//			.ca_resil_degree	= 0 /* TBD */,
-//			.ca_resil		= DAOS_RES_REPL,
-//			.ca_grp_nr		= 4,
-//			.u.rp			= {
-//				.r_proto	= 0 /* TBD */,
-//				.r_num		= 2 /* TBD */,
-//			},
-//		};
-//
-//		/** register a default object class */
-//		rc = daos_obj_register_class(coh, cid, &cattr, NULL);
-//		ASSERT(rc == 0, "class register failed with %d", rc);
-//
-//	}
-
-
-
         dfs_test_share(poh, coh, rank, &dfs);
         /** the other tasks write the array */
-        array();
+        array(arr_size_mb, steps);
 
 	/** close container */
 	daos_cont_close(coh, NULL);
