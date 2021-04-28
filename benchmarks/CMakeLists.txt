@@ -12,10 +12,12 @@ find_package(ADIOS2 REQUIRED)
 
 #add_compile_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
-include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/src/include)
-include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/include/)
-include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/src/tests)
-link_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64)
+include_directories(/home/ranjan/next-project/daos/src/include)
+include_directories(/home/ranjan/next-project/daos/install/include/)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/pmdk/include/)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/argobots/include/)
+include_directories(/home/ranjan/next-project/daos/src/tests)
+link_directories(/home/ranjan/next-project/daos/install/lib64)
 
 add_executable(writer writer.cpp)
 target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C )
@@ -27,6 +29,8 @@ target_link_libraries(reader PRIVATE adios2::cxx11_mpi MPI::MPI_C)
 #target_link_libraries(daos-writer PRIVATE daos gurt daos_common uuid MPI::MPI_C)
 
 
-add_executable(daos-writer simple_array.c)
-target_link_libraries(daos-writer PRIVATE daos daos_common_pmem gurt m cart  uuid cmocka daos_tests MPI::MPI_C)
+#add_executable(daos-writer simple_array.c)
+#target_link_libraries(daos-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
 
+add_executable(daos-posix-writer daos-posix-writer.c)
+target_link_libraries(daos-posix-writer PRIVATE daos daos_common dfs gurt cart  uuid cmocka daos_tests MPI::MPI_C)
