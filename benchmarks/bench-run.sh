@@ -85,16 +85,9 @@ do
 	       NR_READERS=`echo "scale=0; $NR/4" | bc`
 	       reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
 
-	       if [ $ENG_TYPE == "bp4+sst" ]
-	       then
-	           ENG_TYPE_READERS="sst"
-               else
-	           ENG_TYPE_READERS=$ENG_TYPE
-	       fi
-
 	       START_TIME=$SECONDS
                perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE_READERS $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                mv writer*.log $OUTPUT_DIR/
