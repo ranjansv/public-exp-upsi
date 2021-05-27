@@ -5,24 +5,37 @@
            Configuration for Benchmark writers
         ============================================-->
 
-    <io name="bp4-writers">
+    <io name="daos-dfuse-pmem">
         <engine type="BP4">
-            <!-- SST engine parameters -->
-            <parameter key="RendezvousReaderCount" value="0"/>
-            <parameter key="QueueLimit" value="1"/>
-            <parameter key="QueueFullPolicy" value="Discard"/>
-            <!-- BP4/SST engine parameters -->
-            <parameter key="OpenTimeoutSecs" value="10.0"/>
+            <parameter key="Profile" value="Off"/>
+            <parameter key="StatsLevel" value="0"/>
+            <parameter key="StreamReader" value="On"/>
         </engine>
     </io>
-    <io name="sst-writers">
+    <io name="daos-dfuse-dram">
+        <engine type="BP4">
+            <parameter key="Profile" value="Off"/>
+            <parameter key="StatsLevel" value="0"/>
+            <parameter key="StreamReader" value="On"/>
+        </engine>
+    </io>
+    <io name="daos-libdfs-pmem">
+        <engine type="BP4">
+            <parameter key="Profile" value="Off"/>
+            <parameter key="StatsLevel" value="0"/>
+            <parameter key="StreamReader" value="On"/>
+    </engine>
+	<transport type="File">
+		<parameter key="Library" value="Daos"/>
+		<parameter key="pool_uuid" value="c815e226-2597-4426-bb2a-663984734a86"/>
+		<parameter key="cont_uuid" value="f9bbfdd8-55c7-45f4-9e3f-a50f7c9953d5"/>
+	</transport>
+    </io>
+    <io name="sst">
         <engine type="SST">
             <!-- SST engine parameters -->
             <parameter key="RendezvousReaderCount" value="0"/>
-            <parameter key="QueueLimit" value="1"/>
-            <parameter key="QueueFullPolicy" value="Discard"/>
-            <!-- BP4/SST engine parameters -->
-            <parameter key="OpenTimeoutSecs" value="10.0"/>
+            <parameter key="SpeculativePreloadMode" value="OFF"/>
         </engine>
     </io>
 </adios-config>

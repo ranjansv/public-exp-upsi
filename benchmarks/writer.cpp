@@ -48,7 +48,7 @@ void Writer::close() { writer.Close(); }
 int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
-  std::string engine_type = std::string(argv[1]);
+  std::string io_name = std::string(argv[1]);
   size_t arr_size_mb = std::stoi(argv[2]);
   int steps = std::stoi(argv[3]);
 
@@ -63,32 +63,39 @@ int main(int argc, char *argv[]) {
   MPI_Comm_size(comm, &procs);
 
   if (rank == 0) {
-    std::cout << "engine_type: " << engine_type << std::endl;
+    std::cout << "io_name: " << io_name << std::endl;
     std::cout << "arr_size_mb: " << arr_size_mb << std::endl;
     std::cout << "steps: " << steps << std::endl;
   }
   try {
     adios2::ADIOS adios("./adios2.xml", comm);
+    adios2::IO io_daos_posix_pmem  = adios.DeclareIO("daos-posix-pmem");
     adios2::IO io_bp4 = adios.DeclareIO("bp4-writers");
-    adios2::IO io_sst = adios.DeclareIO("sst-writers");
+    adios2::IO io_sst = adios.DeclareIO("sst");
+    Writer writer_bp4_daos(io_daos_posix_pmem, rank, procs, arr_size_mb);
     Writer writer_bp4(io_bp4, rank, procs, arr_size_mb);
     Writer writer_sst(io_sst, rank, procs, arr_size_mb);
 
     bool flag_bp4 = false;
+    bool flag_bp4_daos = false;
     bool flag_sst = false;
 
     int localsize = writer_bp4.getlocalsize();
 
 
-    if (engine_type == "bp4") {
-      writer_bp4.open("/mnt/pmem1/output.bp");
+    if (io_name == "daos-posix-pmem") {
+      writer_bp4.open("/mnt/dfuse/output.bp");
       flag_bp4 = true;
     }
-    else if (engine_type == "sst") {
+    else if (io_name == "bp4-daos") {
+      writer_bp4_daos.open("output.bp");
+      flag_bp4_daos = true;
+    }
+    else if (io_name == "sst") {
       writer_sst.open("output.bp");
       flag_sst = true;
     }
-    else if (engine_type == "bp4+sst") {
+    else if (io_name == "bp4+sst") {
       writer_bp4.open("/mnt/pmem1/output.bp");
       flag_bp4 = true;
       writer_sst.open("output.bp");
@@ -99,13 +106,14 @@ int main(int argc, char *argv[]) {
     Timer timer_compute;
     Timer timer_write;
     Timer timer_bp4;
+    Timer timer_bp4_daos;
     Timer timer_sst;
 
     std::ostringstream log_fname;
     log_fname << "writer-" << rank << ".log";
 
     std::ofstream log(log_fname.str());
-    log << "step\ttotal\tcompute\twrite\twrite_bp4\twrite_sst" << std::endl;
+    log << "step\ttotal\tcompute\twrite\twrite_bp4\twrite_bp4_daos\twrite_sst" << std::endl;
 #endif
       std::vector<double> u(localsize,0);
 
@@ -134,13 +142,18 @@ int main(int argc, char *argv[]) {
       	writer_bp4.write(steps,u);
       double time_bp4 = timer_bp4.stop();
 
+      timer_bp4_daos.start();
+      if(flag_bp4_daos == true)
+      	writer_bp4_daos.write(steps,u);
+      double time_bp4_daos = timer_bp4_daos.stop();
+
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();
       double time_step = timer_total.stop();
       MPI_Barrier(comm);
 
       log << i << "\t" << time_step << "\t" << time_compute << "\t"
-          << time_write << "\t" << time_bp4 << "\t" << time_sst << std::endl;
+          << time_write << "\t" << time_bp4 << "\t" << time_bp4_daos << "\t" << time_sst << std::endl;
 #endif
     }
 

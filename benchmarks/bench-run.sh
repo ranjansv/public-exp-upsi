@@ -17,7 +17,7 @@ git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Build source
 cd build
-make
+make clean && make
 cd ..
 
 #Copy configs and xml to outputdir
@@ -66,6 +66,7 @@ do
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
 	    rm -rf /mnt/pmem1/output.bp &> /dev/null
+	    rm -rf /mnt/dfuse/output.bp &> /dev/null
 
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
@@ -73,6 +74,7 @@ do
 
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
+               #numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
                mv writer*.log $OUTPUT_DIR/
@@ -109,6 +111,8 @@ echo "CSV directory:"
 echo "$RESULT_DIR/csv"
 
 cat $RESULT_DIR/csv/*.csv
+
+#find $RESULT_DIR/ -iname 'stdout*.log'|xargs cat
 
 
 

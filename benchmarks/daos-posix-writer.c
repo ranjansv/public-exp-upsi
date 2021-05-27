@@ -7,12 +7,12 @@
 #include <fcntl.h>
 
 
-#include <daos/tests_lib.h>
 #include <daos.h>
 #include <daos_fs.h>
-#include "suite/daos_test.h"
-#include "suite/dfs_test.h"
 #include <mpi.h>
+#include <gurt/common.h>
+#include <setjmp.h>
+#include <cmocka.h>
 
 /** local task information */
 int			 rank = -1;
@@ -27,6 +27,7 @@ MPI_Comm comm;
 #define	DSS_PSETID	 "daos_tier0"
 
 #define MB_in_bytes    1048576
+
 
 /** Event queue */
 daos_handle_t	eq;
@@ -179,6 +180,7 @@ array(size_t arr_size_mb, int steps)
 	for (iter = 0; iter < steps; iter++) {
 	    
 	    dfs_write(dfs, obj, &reqs[0].sg, off, NULL);
+	    ASSERT(rc == 0, "dfs_write failed with %d", rc);
 	    off += data_per_rank;
 
 	    MPI_Barrier(comm);
@@ -186,12 +188,134 @@ array(size_t arr_size_mb, int steps)
 		epoch++;
 		off = 0;
 	        daos_cont_create_snap(coh, &epoch, NULL, NULL);
+	        ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
 	    }
 	    MPI_Barrier(comm);
 	}
 
+	if(rank == 0)
+	   print_message("rank 0 array()..completed\n");
+
 	D_FREE(reqs);
 	D_FREE(data);
+}
+
+static inline void
+dfs_test_share(daos_handle_t poh, daos_handle_t coh, int rank, dfs_t **dfs)
+{
+        d_iov_t ghdl = { NULL, 0, 0 };
+        int     rc;
+
+        if (rank == 0) {
+                /** fetch size of global handle */
+                rc = dfs_local2global(*dfs, &ghdl);
+                assert_int_equal(rc, 0);
+        }
+
+        /** broadcast size of global handle to all peers */
+        rc = MPI_Bcast(&ghdl.iov_buf_len, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+        assert_int_equal(rc, MPI_SUCCESS);
+
+        /** allocate buffer for global pool handle */
+        D_ALLOC(ghdl.iov_buf, ghdl.iov_buf_len);
+        ghdl.iov_len = ghdl.iov_buf_len;
+
+        if (rank == 0) {
+                /** generate actual global handle to share with peer tasks */
+                rc = dfs_local2global(*dfs, &ghdl);
+                assert_int_equal(rc, 0);
+        }
+
+        /** broadcast global handle to all peers */
+        rc = MPI_Bcast(ghdl.iov_buf, ghdl.iov_len, MPI_BYTE, 0, MPI_COMM_WORLD);
+        assert_int_equal(rc, MPI_SUCCESS);
+
+        if (rank != 0) {
+                /** unpack global handle */
+                rc = dfs_global2local(poh, coh, 0, ghdl, dfs);
+                assert_int_equal(rc, 0);
+        }
+
+        D_FREE(ghdl.iov_buf);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+}
+
+enum {  
+        HANDLE_POOL,
+        HANDLE_CO
+};
+
+static inline void
+handle_share(daos_handle_t *hdl, int type, int rank, daos_handle_t poh,
+             int verbose)
+{
+        d_iov_t ghdl = { NULL, 0, 0 };
+        int             rc;
+
+        if (rank == 0) {
+                /** fetch size of global handle */
+                if (type == HANDLE_POOL)
+                        rc = daos_pool_local2global(*hdl, &ghdl);
+                else
+                        rc = daos_cont_local2global(*hdl, &ghdl);
+                assert_int_equal(rc, 0);
+        }
+
+        /** broadcast size of global handle to all peers */
+        rc = MPI_Bcast(&ghdl.iov_buf_len, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+        assert_int_equal(rc, MPI_SUCCESS);
+
+        /** allocate buffer for global pool handle */
+        D_ALLOC(ghdl.iov_buf, ghdl.iov_buf_len);
+        ghdl.iov_len = ghdl.iov_buf_len;
+
+        if (rank == 0) {
+                /** generate actual global handle to share with peer tasks */
+                if (verbose)
+                        print_message("rank 0 call local2global on %s handle",
+                                      (type == HANDLE_POOL) ?
+                                      "pool" : "container");
+                if (type == HANDLE_POOL)
+                        rc = daos_pool_local2global(*hdl, &ghdl);
+                else
+                        rc = daos_cont_local2global(*hdl, &ghdl);
+                assert_int_equal(rc, 0);
+                if (verbose)
+                        print_message("success\n");
+        }
+
+        /** broadcast global handle to all peers */
+        if (rank == 0 && verbose == 1)
+                print_message("rank 0 broadcast global %s handle ...",
+                              (type == HANDLE_POOL) ? "pool" : "container");
+        rc = MPI_Bcast(ghdl.iov_buf, ghdl.iov_len, MPI_BYTE, 0,
+                       MPI_COMM_WORLD);
+        assert_int_equal(rc, MPI_SUCCESS);
+        if (rank == 0 && verbose == 1)
+                print_message("success\n");
+
+        if (rank != 0) {
+                /** unpack global handle */
+                if (verbose)
+                        print_message("rank %d call global2local on %s handle",
+                                      rank, type == HANDLE_POOL ?
+                                      "pool" : "container");
+                if (type == HANDLE_POOL) {
+                        /* NB: Only pool_global2local are different */
+                        rc = daos_pool_global2local(ghdl, hdl);
+                } else {
+                        rc = daos_cont_global2local(poh, ghdl, hdl);
+                }
+
+                assert_int_equal(rc, 0);
+                if (verbose)
+                        print_message("rank %d global2local success\n", rank);
+        }
+
+        D_FREE(ghdl.iov_buf);
+
+        MPI_Barrier(MPI_COMM_WORLD);
 }
 
 
@@ -199,9 +323,9 @@ int
 main(int argc, char **argv)
 {
 	int	rc;
-
-	size_t arr_size_mb = atoi(argv[1]);
-	int steps = atoi(argv[2]);
+        uuid_parse(argv[1], pool_uuid); 
+	size_t arr_size_mb = atoi(argv[2]);
+	int steps = atoi(argv[3]);
 
 	rc = gethostname(node, sizeof(node));
 	ASSERT(rc == 0, "buffer for hostname too small");
@@ -228,7 +352,7 @@ main(int argc, char **argv)
 
 	if (rank == 0) {
 		/** create a test pool and container for this test */
-		pool_create();
+		//pool_create();
 
 		/** connect to the just created DAOS pool */
 		rc = daos_pool_connect(pool_uuid, DSS_PSETID, NULL /* svc */,
@@ -238,6 +362,7 @@ main(int argc, char **argv)
 				       NULL /* event */);
 		ASSERT(rc == 0, "pool connect failed with %d", rc);
 	}
+
 
 	/** share pool handle with peer tasks */
 	handle_share(&poh, HANDLE_POOL, rank, poh, 1);
@@ -263,6 +388,7 @@ main(int argc, char **argv)
 	/** share container handle with peer tasks */
 	handle_share(&coh, HANDLE_CO, rank, poh, 1);
 
+
         dfs_test_share(poh, coh, rank, &dfs);
         /** the other tasks write the array */
         array(arr_size_mb, steps);
@@ -270,11 +396,20 @@ main(int argc, char **argv)
 	/** close container */
 	daos_cont_close(coh, NULL);
 
+	/** destroy container */
+	if(rank == 0) {
+	    rc = daos_cont_destroy(poh, co_uuid, 1 /* force */, NULL);
+	    ASSERT(rc == 0, "daos_cont_destroy failed with %d", rc);
+
+	    print_message("rank 0 daos_cont_destroy()\n");
+	}
+
+
 	/** disconnect from pool & destroy it */
 	daos_pool_disconnect(poh, NULL);
-	if (rank == 0)
+	//if (rank == 0)
 		/** free allocated storage */
-		pool_destroy();
+	//	pool_destroy();
 
 	/** destroy event queue */
 	rc = daos_eq_destroy(eq, 0);
