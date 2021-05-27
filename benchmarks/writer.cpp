@@ -72,25 +72,17 @@ int main(int argc, char *argv[]) {
     adios2::IO io_handle = adios.DeclareIO(io_name);
     Writer writer(io_handle, rank, procs, arr_size_mb);
 
-    bool flag_daos_dfuse_pmem = false;
-    bool flag_daos_dfuse_dram = false;
-    bool flag_daos_libdfs_dram = false;
-    bool flag_sst = false;
-
     int localsize = writer.getlocalsize();
 
 
     if (io_name == "daos-dfuse") {
       writer.open("/mnt/dfuse/output.bp");
-      flag_daos_dfuse_pmem = true;
     }
     else if (io_name == "bp4-daos") {
       writer.open("output.bp");
-      flag_daos_dfuse_pmem_daos = true;
     }
     else if (io_name == "sst") {
       writer.open("output.bp");
-      flag_sst = true;
     }
     /*
     else if (io_name == "bp4+sst") {
@@ -103,15 +95,12 @@ int main(int argc, char *argv[]) {
     Timer timer_total;
     Timer timer_compute;
     Timer timer_write;
-    Timer timer_bp4;
-    Timer timer_bp4_daos;
-    Timer timer_sst;
 
     std::ostringstream log_fname;
     log_fname << "writer-" << rank << ".log";
 
     std::ofstream log(log_fname.str());
-    log << "step\ttotal\tcompute\twrite\twrite_bp4\twrite_bp4_daos\twrite_sst" << std::endl;
+    log << "step\ttotal\tcompute\twrite" << std::endl;
 #endif
       std::vector<double> u(localsize,0);
 
@@ -130,39 +119,22 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(comm);
       timer_write.start();
 #endif
-      timer_sst.start();
-      if(flag_sst == true)
-        writer_sst.write(steps,u);
-      double time_sst = timer_sst.stop();
-
-      timer_bp4.start();
-      if(flag_daos_dfuse_pmem == true)
-      	writer_bp4.write(steps,u);
-      double time_bp4 = timer_bp4.stop();
-
-      timer_bp4_daos.start();
-      if(flag_daos_dfuse_pmem_daos == true)
-      	writer_bp4_daos.write(steps,u);
-      double time_bp4_daos = timer_bp4_daos.stop();
+      writer.write(steps,u);
 
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();
       double time_step = timer_total.stop();
       MPI_Barrier(comm);
 
-      log << i << "\t" << time_step << "\t" << time_compute << "\t"
-          << time_write << "\t" << time_bp4 << "\t" << time_bp4_daos << "\t" << time_sst << std::endl;
+      log << i << "\t" << time_step << "\t" << time_compute << "\t" << time_write << std::endl;
 #endif
     }
+    writer.close();
 
-    if(flag_daos_dfuse_pmem == true)
-    	writer_bp4.close();
-    if(flag_sst == true)
-    	writer_sst.close();
 
 #ifdef ENABLE_TIMERS
     log << "total\t" << timer_total.elapsed() << "\t" << timer_compute.elapsed()
-        << "\t" << timer_write.elapsed() << "\t" << timer_bp4.elapsed() << "\t" << timer_sst.elapsed() << std::endl;
+        << "\t" << timer_write.elapsed() << std::endl;
 
     log.close();
 #endif
