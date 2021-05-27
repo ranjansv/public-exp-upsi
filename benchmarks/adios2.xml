@@ -7,22 +7,15 @@
 
     <io name="bp4-writers">
         <engine type="BP4">
-            <!-- SST engine parameters -->
-            <parameter key="RendezvousReaderCount" value="0"/>
-            <parameter key="QueueLimit" value="1"/>
-            <parameter key="QueueFullPolicy" value="Discard"/>
-            <!-- BP4/SST engine parameters -->
-            <parameter key="OpenTimeoutSecs" value="10.0"/>
+            <parameter key="Profile" value="Off"/>
+            <parameter key="StatsLevel" value="0"/>
+            <parameter key="StreamReader" value="On"/>
         </engine>
     </io>
     <io name="sst-writers">
         <engine type="SST">
-            <!-- SST engine parameters -->
             <parameter key="RendezvousReaderCount" value="0"/>
-            <parameter key="QueueLimit" value="1"/>
-            <parameter key="QueueFullPolicy" value="Discard"/>
-            <!-- BP4/SST engine parameters -->
-            <parameter key="OpenTimeoutSecs" value="10.0"/>
+            <parameter key="SpeculativePreloadMode" value="OFF"/>
         </engine>
     </io>
 </adios-config>
