@@ -69,38 +69,36 @@ int main(int argc, char *argv[]) {
   }
   try {
     adios2::ADIOS adios("./adios2.xml", comm);
-    adios2::IO io_daos_posix_pmem  = adios.DeclareIO("daos-posix-pmem");
-    adios2::IO io_bp4 = adios.DeclareIO("bp4-writers");
-    adios2::IO io_sst = adios.DeclareIO("sst");
-    Writer writer_bp4_daos(io_daos_posix_pmem, rank, procs, arr_size_mb);
-    Writer writer_bp4(io_bp4, rank, procs, arr_size_mb);
-    Writer writer_sst(io_sst, rank, procs, arr_size_mb);
+    adios2::IO io_handle = adios.DeclareIO(io_name);
+    Writer writer(io_handle, rank, procs, arr_size_mb);
 
-    bool flag_bp4 = false;
-    bool flag_bp4_daos = false;
+    bool flag_daos_dfuse_pmem = false;
+    bool flag_daos_dfuse_dram = false;
+    bool flag_daos_libdfs_dram = false;
     bool flag_sst = false;
 
-    int localsize = writer_bp4.getlocalsize();
+    int localsize = writer.getlocalsize();
 
 
-    if (io_name == "daos-posix-pmem") {
-      writer_bp4.open("/mnt/dfuse/output.bp");
-      flag_bp4 = true;
+    if (io_name == "daos-dfuse") {
+      writer.open("/mnt/dfuse/output.bp");
+      flag_daos_dfuse_pmem = true;
     }
     else if (io_name == "bp4-daos") {
-      writer_bp4_daos.open("output.bp");
-      flag_bp4_daos = true;
+      writer.open("output.bp");
+      flag_daos_dfuse_pmem_daos = true;
     }
     else if (io_name == "sst") {
-      writer_sst.open("output.bp");
+      writer.open("output.bp");
       flag_sst = true;
     }
+    /*
     else if (io_name == "bp4+sst") {
       writer_bp4.open("/mnt/pmem1/output.bp");
-      flag_bp4 = true;
+      flag_daos_dfuse_pmem = true;
       writer_sst.open("output.bp");
       flag_sst = true;
-    }
+    }*/
 #ifdef ENABLE_TIMERS
     Timer timer_total;
     Timer timer_compute;
@@ -138,12 +136,12 @@ int main(int argc, char *argv[]) {
       double time_sst = timer_sst.stop();
 
       timer_bp4.start();
-      if(flag_bp4 == true)
+      if(flag_daos_dfuse_pmem == true)
       	writer_bp4.write(steps,u);
       double time_bp4 = timer_bp4.stop();
 
       timer_bp4_daos.start();
-      if(flag_bp4_daos == true)
+      if(flag_daos_dfuse_pmem_daos == true)
       	writer_bp4_daos.write(steps,u);
       double time_bp4_daos = timer_bp4_daos.stop();
 
@@ -157,7 +155,7 @@ int main(int argc, char *argv[]) {
 #endif
     }
 
-    if(flag_bp4 == true)
+    if(flag_daos_dfuse_pmem == true)
     	writer_bp4.close();
     if(flag_sst == true)
     	writer_sst.close();

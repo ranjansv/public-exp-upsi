@@ -5,21 +5,14 @@
            Configuration for Benchmark writers
         ============================================-->
 
-    <io name="daos-dfuse-pmem">
+    <io name="daos-dfuse">
         <engine type="BP4">
             <parameter key="Profile" value="Off"/>
             <parameter key="StatsLevel" value="0"/>
             <parameter key="StreamReader" value="On"/>
         </engine>
     </io>
-    <io name="daos-dfuse-dram">
-        <engine type="BP4">
-            <parameter key="Profile" value="Off"/>
-            <parameter key="StatsLevel" value="0"/>
-            <parameter key="StreamReader" value="On"/>
-        </engine>
-    </io>
-    <io name="daos-libdfs-pmem">
+    <io name="daos-libdfs">
         <engine type="BP4">
             <parameter key="Profile" value="Off"/>
             <parameter key="StatsLevel" value="0"/>
