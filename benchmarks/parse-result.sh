@@ -19,9 +19,9 @@ do
 	DATASIZE_IN_GB=`echo "scale=1; $DATASIZE/1024" | bc`
         echo -n "$DATASIZE_IN_GB" >> $OUTPUT_FILE
 
-        for ENG_TYPE in $ENGINE
+        for IO_NAME in $ENGINE
         do
-             AVG_TOTAL_WRITE_TIME=`ls -1 $RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb/writer*.log|xargs -L 1 tail -1|awk -F '\t' '{print $4}'| awk 'BEGIN{sum=0;} {sum+=$1} END{printf "%.f\n", sum/NR/1000;}'`
+             AVG_TOTAL_WRITE_TIME=`ls -1 $RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb/writer*.log|xargs -L 1 tail -1|awk -F '\t' '{print $4}'| awk 'BEGIN{sum=0;} {sum+=$1} END{printf "%.f\n", sum/NR/1000;}'`
             echo -n ",$AVG_TOTAL_WRITE_TIME" >> $OUTPUT_FILE
         done
         echo "" >> $OUTPUT_FILE
@@ -48,9 +48,9 @@ then
     	DATASIZE_IN_GB=`echo "scale=1; $DATASIZE * 4/1024" | bc`
             echo -n "$DATASIZE_IN_GB" >> $OUTPUT_FILE
     
-            for ENG_TYPE in $ENGINE
+            for IO_NAME in $ENGINE
             do
-                AVG_TOTAL_READ_TIME=`ls -1 $RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb/reader*.log|xargs -L 1 tail -1|awk -F '\t' '{print $3}'| awk 'BEGIN{sum=0;} {sum+=$1} END{printf "%.f\n", sum/NR/1000;}'`
+                AVG_TOTAL_READ_TIME=`ls -1 $RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb/reader*.log|xargs -L 1 tail -1|awk -F '\t' '{print $3}'| awk 'BEGIN{sum=0;} {sum+=$1} END{printf "%.f\n", sum/NR/1000;}'`
                 echo -n ",$AVG_TOTAL_READ_TIME" >> $OUTPUT_FILE
             done
             echo "" >> $OUTPUT_FILE
@@ -70,9 +70,9 @@ then
 		GLOBAL_ARRAY_SIZE_GB=`echo "scale=1; ($DATASIZE/1024) * ($NR/$STEPS)" | bc`
             echo -n "$GLOBAL_ARRAY_SIZE_GB" >> $OUTPUT_FILE
     
-            for ENG_TYPE in $ENGINE
+            for IO_NAME in $ENGINE
             do
-                WORKFLOW_TIME=`cat $RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb/workflow-time.log`
+                WORKFLOW_TIME=`cat $RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb/workflow-time.log`
                 echo -n ",$WORKFLOW_TIME" >> $OUTPUT_FILE
             done
             echo "" >> $OUTPUT_FILE

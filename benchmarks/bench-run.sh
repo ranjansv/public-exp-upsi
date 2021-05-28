@@ -53,29 +53,45 @@ fi
 #       reader_lastcpu=$(( $reader_firstcpu + ${thr} - 1))
 #fi
 
+rm writer-*.log reader-*.log &> /dev/null
+
 for NR in $PROCS
 do
     writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
-    for ENG_TYPE in $ENGINE
+    for IO_NAME in $ENGINE
     do
+	#Parse IO_NAME for engine and storage type in case of DAOS
+	if grep -q "daos-posix" <<< "$IO_NAME"; then
+		ENG_TYPE="daos-posix"
+	        if grep -q "pmem" <<< "$IO_NAME"; then
+		    FILENAME="/mnt/dfuse/output.bp"
+	        elif grep -q "dram" <<< "$IO_NAME"; then
+		    FILENAME="/mnt/dfuse/output.bp"
+		fi
+	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
+	#	ENG_TYPE="daos-transport"
+	elif grep -q "sst" <<< "$IO_NAME"; then
+		ENG_TYPE="sst"
+		FILENAME="output.bp"
+	fi
+
         for DATASIZE in $TOTAL_DATA_PER_RANK
         do
-            echo "Processing ${NR}ranks, ${ENG_TYPE}writers, ${DATASIZE}mb"
+            echo "Processing ${NR}ranks, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
-	    rm -rf /mnt/pmem1/output.bp &> /dev/null
+	    rm -rf /mnt/epmem/output.bp &> /dev/null
 	    rm -rf /mnt/dfuse/output.bp &> /dev/null
 
 
-	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
+	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
 
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
-               #numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
                mv writer*.log $OUTPUT_DIR/
 
@@ -86,8 +102,8 @@ do
 	       reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
 
 	       START_TIME=$SECONDS
-               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                mv writer*.log $OUTPUT_DIR/
