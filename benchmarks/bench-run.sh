@@ -12,12 +12,13 @@ RESULT_DIR="results/$TIMESTAMP"
 mkdir -p $RESULT_DIR
 
 mount|grep dax > $RESULT_DIR/fs-type.log
+cp /etc/daos/daos_server.yml $RESULT_DIR/
 git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Build source
 cd build
-make
+make clean && make
 cd ..
 
 #Copy configs and xml to outputdir
@@ -53,46 +54,67 @@ fi
 #       reader_lastcpu=$(( $reader_firstcpu + ${thr} - 1))
 #fi
 
+rm writer-*.log reader-*.log &> /dev/null
+
 for NR in $PROCS
 do
-    writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
-    for ENG_TYPE in $ENGINE
+    for IO_NAME in $ENGINE
     do
+	#Parse IO_NAME for engine and storage type in case of DAOS
+	if grep -q "daos-posix" <<< "$IO_NAME"; then
+		ENG_TYPE="daos-posix"
+	        if grep -q "pmem" <<< "$IO_NAME"; then
+		    FILENAME="/mnt/dfuse/output.bp"
+	        elif grep -q "dram" <<< "$IO_NAME"; then
+		    FILENAME="/mnt/dfuse/output.bp"
+		fi
+                writer_firstcpu=28
+                reader_firstcpu=0
+	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
+	#	ENG_TYPE="daos-transport"
+	elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
+		ENG_TYPE="ext4-posix:pmem"
+		FILENAME="/mnt/pmem0/output.bp"
+                writer_firstcpu=0
+                reader_firstcpu=28
+	elif grep -q "sst" <<< "$IO_NAME"; then
+		ENG_TYPE="sst"
+		FILENAME="output.bp"
+	fi
+
         for DATASIZE in $TOTAL_DATA_PER_RANK
         do
-            echo "Processing ${NR}ranks, ${ENG_TYPE}writers, ${DATASIZE}mb"
+            echo "Processing ${NR}ranks, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
-	    rm -rf /mnt/pmem1/output.bp &> /dev/null
+	    rm -rf /mnt/epmem/output.bp &> /dev/null
+	    rm -rf /mnt/dfuse/output.bp &> /dev/null
+	    rm -rf /mnt/pmem0/output.bp &> /dev/null
 
 
-	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${ENG_TYPE}writers/${DATASIZE}mb"
+	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
+            writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
+	    NR_READERS=`echo "scale=0; $NR/4" | bc`
+	    reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
 
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
-               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 
                mv writer*.log $OUTPUT_DIR/
+               mv reader*.log $OUTPUT_DIR/
 
 	    elif [ $BENCH_TYPE == "workflow" ]
 	    then
 
-	       NR_READERS=`echo "scale=0; $NR/4" | bc`
-	       reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
-
-	       if [ $ENG_TYPE == "bp4+sst" ]
-	       then
-	           ENG_TYPE_READERS="sst"
-               else
-	           ENG_TYPE_READERS=$ENG_TYPE
-	       fi
 
 	       START_TIME=$SECONDS
-               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE_READERS $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                mv writer*.log $OUTPUT_DIR/
@@ -109,6 +131,15 @@ echo "CSV directory:"
 echo "$RESULT_DIR/csv"
 
 cat $RESULT_DIR/csv/*.csv
+mkdir -p "export-${RESULT_DIR}/csv/"
+cp $RESULT_DIR/csv/*.csv export-${RESULT_DIR}/csv/
+cp ${CONFIG_FILE} export-$RESULT_DIR/config.sh
+cp ./adios2.xml export-$RESULT_DIR
+mount|grep dax > export-$RESULT_DIR/fs-type.log
+cp /etc/daos/daos_server.yml export-$RESULT_DIR/
+
+
+#find $RESULT_DIR/ -iname 'stdout*.log'|xargs cat
 
 
 

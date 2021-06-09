@@ -5,14 +5,28 @@
            Configuration for Benchmark writers
         ============================================-->
 
-    <io name="bp4-writers">
+    <io name="daos-posix">
+        <engine type="BP4">
+            <parameter key="Profile" value="Off"/>
+            <parameter key="OpenTimeoutSecs" value="10.0"/>
+            <parameter key="StatsLevel" value="0"/>
+            <!--parameter key="StreamReader" value="On"/-->
+            <parameter key="NumAggregators" value="100"/>
+        </engine>
+    </io>
+    <io name="daos-transport">
         <engine type="BP4">
             <parameter key="Profile" value="Off"/>
             <parameter key="StatsLevel" value="0"/>
             <parameter key="StreamReader" value="On"/>
-        </engine>
+    </engine>
+	<transport type="File">
+		<parameter key="Library" value="Daos"/>
+		<parameter key="pool_uuid" value="c815e226-2597-4426-bb2a-663984734a86"/>
+		<parameter key="cont_uuid" value="f9bbfdd8-55c7-45f4-9e3f-a50f7c9953d5"/>
+	</transport>
     </io>
-    <io name="sst-writers">
+    <io name="sst">
         <engine type="SST">
             <parameter key="RendezvousReaderCount" value="0"/>
             <parameter key="SpeculativePreloadMode" value="OFF"/>

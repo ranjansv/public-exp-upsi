@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(benchmark C CXX)
+#set(CMAKE_BUILD_TYPE Debug)
 
 #set(CMAKE_CXX_FLAGS "-fpic -g -std=c++11 -Wno-write-strings") 
 #set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -std=c++11")
@@ -12,12 +13,12 @@ find_package(ADIOS2 REQUIRED)
 
 #add_compile_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 
-include_directories(/home/ranjan/next-project/daos/src/include)
-include_directories(/home/ranjan/next-project/daos/install/include/)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/pmdk/include/)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/argobots/include/)
-include_directories(/home/ranjan/next-project/daos/src/tests)
-link_directories(/home/ranjan/next-project/daos/install/lib64)
+#include_directories(/home/ranjan/next-project/daos/src/include)
+#include_directories(/home/ranjan/next-project/daos/install/include/)
+#include_directories(/home/ranjan/next-project/daos/install/prereq/dev/pmdk/include/)
+#include_directories(/home/ranjan/next-project/daos/install/prereq/dev/argobots/include/)
+#include_directories(/home/ranjan/next-project/daos/src/tests)
+#link_directories(/home/ranjan/next-project/daos/install/lib64)
 
 add_executable(writer writer.cpp)
 target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C )

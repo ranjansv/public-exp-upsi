@@ -15,8 +15,9 @@
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
-  size_t arr_size_mb = std::stoi(argv[2]);
-  int steps = std::stoi(argv[3]);
+  std::string filename = std::string(argv[2]);
+  size_t arr_size_mb = std::stoi(argv[3]);
+  int steps = std::stoi(argv[4]);
   int rank, comm_size, wrank;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
@@ -31,7 +32,7 @@ int main(int argc, char *argv[]) {
   adios2::ADIOS ad("adios2.xml", comm);
 
   // Open IO instance
-  adios2::IO reader_io = ad.DeclareIO(engine_type + "-writers");
+  adios2::IO reader_io = ad.DeclareIO(engine_type);
 
   // Declare variables
   std::vector<double> u;
@@ -40,12 +41,6 @@ int main(int argc, char *argv[]) {
   adios2::Variable<int> var_step_in;
 
   // Open Engine
-  std::string filename;
-  if (engine_type == "bp4")
-    filename = "/mnt/pmem1/output.bp";
-  else if (engine_type == "sst")
-    filename = "output.bp";
-
   adios2::Engine reader = reader_io.Open(filename, adios2::Mode::Read, comm);
 
   // Perform Reads
