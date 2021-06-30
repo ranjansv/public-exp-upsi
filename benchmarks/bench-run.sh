@@ -11,6 +11,9 @@ TIMESTAMP=`echo $(date +%Y-%m-%d-%H:%M:%S)`
 RESULT_DIR="results/$TIMESTAMP"
 mkdir -p $RESULT_DIR
 
+rm results/latest
+ln -s $TIMESTAMP results/latest
+
 mount|grep dax > $RESULT_DIR/fs-type.log
 cp /etc/daos/daos_server.yml $RESULT_DIR/
 git branch --show-current > git branch --show-current
