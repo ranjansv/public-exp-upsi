@@ -33,7 +33,7 @@ for NR in $PROCS
 do
     #Setup outfile for recording average total read time   
     mkdir -p $RESULT_DIR/csv/
-    NR_READERS=`echo "scale=0; $NR/4" | bc`
+    NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
     
     OUTPUT_FILE="${RESULT_DIR}/csv/readtime-${NR_READERS}ranks.csv"
     echo "totaldataperank,$ENGINE" > $OUTPUT_FILE
@@ -42,7 +42,7 @@ do
     for DATASIZE in $TOTAL_DATA_PER_RANK
     do
 	#Multiply by 4 to compute datasize per rank of the reader
-	DATASIZE_IN_GB=`echo "scale=1; $DATASIZE * 4/1024" | bc`
+	DATASIZE_IN_GB=`echo "scale=1; $DATASIZE * $READ_WRITE_RATIO/1024" | bc`
         echo -n "$DATASIZE_IN_GB" >> $OUTPUT_FILE
 
         for IO_NAME in $ENGINE

@@ -1,10 +1,9 @@
 BENCH_TYPE="writer"
-ENGINE="daos-posix:pmem pmem-posix"
-#TOTAL_DATA_PER_RANK="512 1024"
+ENGINE="daos-posix:pmem ext4-posix:pmem"
 TOTAL_DATA_PER_RANK="512 1024 2048"
 STEPS=8
-#PROCS="8 16"
 PROCS="8 16 24"
+READ_WRITE_RATIO="4"
 EXECUTION_MODE="serial"
 WRITER_NUMA="local"
 READER_NUMA="remote"

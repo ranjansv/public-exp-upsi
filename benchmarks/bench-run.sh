@@ -65,7 +65,7 @@ do
     do
 	#Parse IO_NAME for engine and storage type in case of DAOS
 	if grep -q "daos-posix" <<< "$IO_NAME"; then
-		ENG_TYPE="daos-posix"
+		ENG_TYPE="posix"
 	        if grep -q "pmem" <<< "$IO_NAME"; then
 		    FILENAME="/mnt/dfuse/output.bp"
 	        elif grep -q "dram" <<< "$IO_NAME"; then
@@ -76,7 +76,7 @@ do
 	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
 	#	ENG_TYPE="daos-transport"
 	elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
-		ENG_TYPE="ext4-posix:pmem"
+		ENG_TYPE="posix"
 		FILENAME="/mnt/pmem0/output.bp"
                 writer_firstcpu=0
                 reader_firstcpu=28
@@ -87,7 +87,8 @@ do
 
         for DATASIZE in $TOTAL_DATA_PER_RANK
         do
-            echo "Processing ${NR}ranks, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
+	    NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
+            echo "Processing ${NR} writers ${NR_READERS} readers, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
@@ -100,7 +101,7 @@ do
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
             writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
-	    NR_READERS=`echo "scale=0; $NR/4" | bc`
+	    #NR_READERS=$NR
 	    reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
 
 	    if [ $BENCH_TYPE == "writer" ]
@@ -114,6 +115,8 @@ do
 	    elif [ $BENCH_TYPE == "workflow" ]
 	    then
 
+               #echo "writer arguments $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS "
+               #echo "reader arguments $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS"
 
 	       START_TIME=$SECONDS
                perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &

@@ -1,10 +1,14 @@
 #!/bin/bash
 
-TEST=$1
-
-for i in {1..4}
+declare -a read_write_ratio=("1" "2" "4")
+for ratio in "${read_write_ratio[@]}"
 do
-	echo "Executing $i bench-run"
+	echo "Executing bench-run with reader-writer ratio: $ratio"
 	echo "=================================================="
-	./bench-run.sh $TEST
+	sed -i "s/READ_WRITE.*/READ_WRITE_RATIO=\"${ratio}\"/g" config/writer-fulltest-config.sh 
+	START_TIME=$SECONDS
+	./bench-run.sh config/writer-fulltest-config.sh
+	ELAPSED_TIME=$(($SECONDS - $START_TIME))
+	echo "COMPLETED bench-run with reader-writer ratio: $ratio"
+	echo "Elapsed time: $ELAPSED_TIME seconds"
 done

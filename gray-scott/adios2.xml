@@ -6,7 +6,7 @@
         ============================================-->
 
     <io name="SimulationOutput">
-        <engine type="BP4">
+        <engine type="SST">
             <!-- BP4 engine parameters -->
             <parameter key="RendezvousReaderCount" value="0"/>
             <parameter key="QueueLimit" value="1"/>
@@ -67,11 +67,11 @@
 
     <!-- example engines
 
-        <engine type="BPFile"/>
-        <engine type="BP4"/>
-        <engine type="HDF5"/>
-        <engine type="BP4"/>
-        <engine type="InSituMPI"/>
+        <engine type="BP4">
+        <engine type="BP4">
+        <engine type="BP4">
+        <engine type="BP4">
+        <engine type="BP4">
 
         === BP4 ===
         BP4 can be set up to force blocking the producer on a consumer
@@ -110,7 +110,7 @@
         'OpenTimeoutSecs' paramter specifies how long to wait on a reading Open
             for the file to appear. Useful for streaming when the reader starts up
             faster than the writer produce any output. 
-        <engine type="BPFile">
+        <engine type="BP4">
             <parameter key="SubStreams" value="4"/>
             <parameter key="OpenTimeoutSecs" value="10.0"/>
         </engine>
@@ -119,7 +119,7 @@
         BPFile is a token name for the BP3 old file format.
         It will refer to BP4 in the future. 
         'SubStreams' parameter is the same as for BP4.
-        <engine type="BPFile">
+        <engine type="BP4">
             <parameter key="SubStreams" value="4"/>
         </engine>
 

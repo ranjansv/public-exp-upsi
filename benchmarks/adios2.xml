@@ -5,11 +5,12 @@
            Configuration for Benchmark writers
         ============================================-->
 
-    <io name="daos-posix">
+    <io name="posix">
         <engine type="BP4">
             <parameter key="Profile" value="Off"/>
             <parameter key="OpenTimeoutSecs" value="10.0"/>
             <parameter key="StatsLevel" value="0"/>
+            <parameter key="StreamReader" value="On"/>
             <!--parameter key="StreamReader" value="On"/-->
             <parameter key="NumAggregators" value="100"/>
         </engine>
@@ -17,8 +18,10 @@
     <io name="daos-transport">
         <engine type="BP4">
             <parameter key="Profile" value="Off"/>
+            <parameter key="OpenTimeoutSecs" value="10.0"/>
             <parameter key="StatsLevel" value="0"/>
             <parameter key="StreamReader" value="On"/>
+            <parameter key="NumAggregators" value="100"/>
     </engine>
 	<transport type="File">
 		<parameter key="Library" value="Daos"/>
