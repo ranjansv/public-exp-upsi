@@ -93,7 +93,6 @@ do
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
-	    rm -rf /mnt/epmem/output.bp &> /dev/null
 	    rm -rf /mnt/dfuse/output.bp &> /dev/null
 	    rm -rf /mnt/pmem0/output.bp &> /dev/null
 

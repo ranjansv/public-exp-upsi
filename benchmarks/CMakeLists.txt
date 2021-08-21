@@ -15,10 +15,13 @@ find_package(ADIOS2 REQUIRED)
 
 #include_directories(/home/ranjan/next-project/daos/src/include)
 #include_directories(/home/ranjan/next-project/daos/install/include/)
-#include_directories(/home/ranjan/next-project/daos/install/prereq/dev/pmdk/include/)
-#include_directories(/home/ranjan/next-project/daos/install/prereq/dev/argobots/include/)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/pmdk/include/)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/isal/include)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/isal_crypto/include)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/argobots/include/)
+include_directories(/home/ranjan/next-project/daos/install/prereq/dev/protobufc/include)
 #include_directories(/home/ranjan/next-project/daos/src/tests)
-#link_directories(/home/ranjan/next-project/daos/install/lib64)
+link_directories(/home/ranjan/next-project/daos/install/lib64)
 
 add_executable(writer writer.cpp)
 target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C )
@@ -26,12 +29,12 @@ target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C )
 add_executable(reader reader.cpp)
 target_link_libraries(reader PRIVATE adios2::cxx11_mpi MPI::MPI_C)
 
-#add_executable(daos-writer daos-writer.c)
-#target_link_libraries(daos-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
+add_executable(daos-writer daos-writer.c)
+target_link_libraries(daos-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
 
 
-#add_executable(simple_array simple_array.c)
-#target_link_libraries(simple_array PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
+add_executable(simple_array simple_array.c)
+target_link_libraries(simple_array PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
 
 #add_executable(daos-posix-writer daos-posix-writer.c)
 #target_link_libraries(daos-posix-writer PRIVATE daos daos_common dfs gurt cart  uuid cmocka daos_tests MPI::MPI_C)
