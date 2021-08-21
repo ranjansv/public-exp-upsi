@@ -14,7 +14,7 @@ mkdir -p $RESULT_DIR
 rm results/latest
 ln -s $TIMESTAMP results/latest
 
-mount|grep dax > $RESULT_DIR/fs-type.log
+mount > $RESULT_DIR/fs-mounts.log
 cp /etc/daos/daos_server.yml $RESULT_DIR/
 git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
