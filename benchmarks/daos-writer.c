@@ -76,44 +76,6 @@ do {								\
 		FAIL(__VA_ARGS__);				\
 } while (0)
 
-void
-pool_create(void)
-{
-	int	rc;
-
-	/**
-	 * allocate list of service nodes, returned as output parameter of
-	 * dmg_pool_create() and used to connect
-	 */
-
-	/** create pool over all the storage targets */
-	svcl.rl_nr = 3;
-	D_ALLOC_ARRAY(svcl.rl_ranks, svcl.rl_nr);
-	ASSERT(svcl.rl_ranks);
-	rc = dmg_pool_create(NULL /* config file */,
-			     geteuid() /* user owner */,
-			     getegid() /* group owner */,
-			     DSS_PSETID /* daos server process set ID */,
-			     NULL /* list of targets, NULL = all */,
-			     10ULL << 30 /* target SCM size, 10G */,
-			     40ULL << 30 /* target NVMe size, 40G */,
-			     NULL /* pool props */,
-			     &svcl /* pool service nodes */,
-			     pool_uuid /* the uuid of the pool created */);
-	ASSERT(rc == 0, "pool create failed with %d", rc);
-}
-
-void
-pool_destroy(void)
-{
-	int	rc;
-
-	/** destroy the pool created in pool_create */
-	rc = dmg_pool_destroy(NULL, pool_uuid, DSS_PSETID, 1 /* force */);
-	ASSERT(rc == 0, "pool destroy failed with %d", rc);
-	D_FREE(svcl.rl_ranks);
-}
-
 static inline void
 ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
 	int rc;
