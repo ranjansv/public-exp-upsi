@@ -76,6 +76,30 @@ do {								\
 		FAIL(__VA_ARGS__);				\
 } while (0)
 
+static inline void
+ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
+       int rc;
+       int j;
+
+
+       for (j = 0; j < MAX_IOREQS; j++) {
+               struct io_req   *req = &reqs[j];
+
+               /** initialize event */
+               //rc = daos_event_init(&req->ev, eq, NULL);
+               //ASSERT(rc == 0, "event init failed with %d", rc);
+
+               /** initialize scatter/gather */
+               req->iov = (d_iov_t) {
+                       .iov_buf        = data,
+                       .iov_buf_len    = data_per_rank * sizeof(data[0]),
+                       .iov_len        = data_per_rank * sizeof(data[0]),
+               };
+               req->sg.sg_nr           = 1;
+               req->sg.sg_iovs         = &req->iov;
+       }
+}
+
 void
 array(size_t arr_size_mb, int steps)
 {
