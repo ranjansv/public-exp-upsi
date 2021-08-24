@@ -21,9 +21,15 @@ char			 node[128] = "unknown";
 MPI_Comm comm;
 
 /** Name of the process set associated with the DAOS server */
-#define	DSS_PSETID	 "daos_tier0"
+#define	DSS_PSETID	 "daos_server"
+//#define	DSS_PSETID	 "daos_tier0"
 
 #define MB_in_bytes    1048576
+#define NUM_ELEMS       64
+static daos_ofeat_t feat = DAOS_OF_DKEY_UINT64 | DAOS_OF_KV_FLAT |
+        DAOS_OF_ARRAY;
+static daos_ofeat_t featb = DAOS_OF_DKEY_UINT64 | DAOS_OF_KV_FLAT |
+        DAOS_OF_ARRAY | DAOS_OF_ARRAY_BYTE;
 
 /** Event queue */
 daos_handle_t	eq;
@@ -137,6 +143,151 @@ array(size_t arr_size_mb, int steps)
 	D_FREE(data);
 }
 
+static void
+array_oh_share(daos_handle_t *oh)
+{
+        d_iov_t ghdl = { NULL, 0, 0 };
+        int             rc;
+
+        if (rank == 0) {
+                /** fetch size of global handle */
+                rc = daos_array_local2global(*oh, &ghdl);
+                assert_rc_equal(rc, 0);
+        }
+
+        /** broadcast size of global handle to all peers */
+        rc = MPI_Bcast(&ghdl.iov_buf_len, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+        assert_int_equal(rc, MPI_SUCCESS);
+
+        /** allocate buffer for global pool handle */
+        D_ALLOC(ghdl.iov_buf, ghdl.iov_buf_len);
+        ghdl.iov_len = ghdl.iov_buf_len;
+
+        if (rank == 0) {
+                /** generate actual global handle to share with peer tasks */
+                rc = daos_array_local2global(*oh, &ghdl);
+                assert_rc_equal(rc, 0);
+        }
+
+        /** broadcast global handle to all peers */
+        rc = MPI_Bcast(ghdl.iov_buf, ghdl.iov_len, MPI_BYTE, 0, MPI_COMM_WORLD);
+        assert_int_equal(rc, MPI_SUCCESS);
+
+        if (rank != 0) {
+                /** unpack global handle */
+                rc = daos_array_global2local(coh, ghdl, 0, oh);
+                assert_rc_equal(rc, 0);
+        }
+
+        D_FREE(ghdl.iov_buf);
+
+        MPI_Barrier(MPI_COMM_WORLD);
+}
+
+void
+write_data(size_t arr_size_mb, int steps, int async)
+{
+        daos_obj_id_t   oid;
+        daos_handle_t   oh;
+        daos_array_iod_t iod;
+        daos_range_t    rg;
+        d_sg_list_t     sgl;
+        d_iov_t         iov;
+        int             *wbuf = NULL, *rbuf = NULL;
+        daos_size_t     i;
+        daos_event_t    ev, *evp;
+        int             rc;
+        int             iter;
+
+        /* Temporary assignment */
+        daos_size_t cell_size = 1;
+	static daos_size_t chunk_size = 16;
+
+        MPI_Barrier(MPI_COMM_WORLD);
+        /** create the array on rank 0 and share the oh. */
+        if (rank == 0) {
+                oid = daos_test_oid_gen(coh, OC_SX,
+                                        (cell_size == 1) ? featb : feat, 0, 0);
+                rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size,
+                                       chunk_size, &oh, NULL);
+                assert_rc_equal(rc, 0);
+        }
+        array_oh_share(&oh);
+
+        /** Allocate and set buffer */
+        D_ALLOC_ARRAY(wbuf, NUM_ELEMS);
+        assert_non_null(wbuf);
+        D_ALLOC_ARRAY(rbuf, NUM_ELEMS);
+        assert_non_null(rbuf);
+        for (i = 0; i < NUM_ELEMS; i++)
+                wbuf[i] = i+1;
+
+        /** set array location */
+        iod.arr_nr = 1;
+        rg.rg_len = NUM_ELEMS * sizeof(int) / cell_size;
+        rg.rg_idx = rank * rg.rg_len;
+        iod.arr_rgs = &rg;
+
+        /** set memory location */
+        sgl.sg_nr = 1;
+        d_iov_set(&iov, wbuf, NUM_ELEMS * sizeof(int));
+        sgl.sg_iovs = &iov;
+
+	for (iter = 0; iter < steps; iter++) {
+
+
+        /** Write */
+        if (async) {
+                rc = daos_event_init(&ev, eq, NULL);
+                assert_rc_equal(rc, 0);
+        }
+        rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl,
+                              async ? &ev : NULL);
+
+        assert_rc_equal(rc, 0);
+        /** Read */
+        if (async) {
+                rc = daos_event_init(&ev, eq, NULL);
+                assert_rc_equal(rc, 0);
+        }
+        d_iov_set(&iov, rbuf, NUM_ELEMS * sizeof(int));
+        sgl.sg_iovs = &iov;
+        rc = daos_array_read(oh, DAOS_TX_NONE, &iod, &sgl,
+                             async ? &ev : NULL);
+        assert_rc_equal(rc, 0);
+        if (async) {
+                /** Wait for completion */
+                rc = daos_eq_poll(eq, 0, DAOS_EQ_WAIT, 1, &evp);
+                assert_rc_equal(rc, 1);
+                assert_ptr_equal(evp, &ev);
+                assert_int_equal(evp->ev_error, 0);
+
+                rc = daos_event_fini(&ev);
+                assert_rc_equal(rc, 0);
+        }
+
+        /** Verify data */
+        if (cell_size == 1)
+                assert_int_equal(iod.arr_nr_short_read, 0);
+        for (i = 0; i < NUM_ELEMS; i++) {
+                if (wbuf[i] != rbuf[i]) {
+                        printf("Data verification failed\n");
+                        printf("%zu: written %d != read %d\n",
+                                i, wbuf[i], rbuf[i]);
+                }
+                assert_int_equal(wbuf[i], rbuf[i]);
+        }
+
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        }
+    D_FREE(rbuf);
+    D_FREE(wbuf);
+
+}
+
+
 
 int
 main(int argc, char **argv)
@@ -207,7 +358,8 @@ main(int argc, char **argv)
 	handle_share(&coh, HANDLE_CO, rank, poh, 1);
 
         /** the other tasks write the array */
-        array(arr_size_mb, steps);
+        //array(arr_size_mb, steps);
+	write_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
 
 	/** close container */
 	daos_cont_close(coh, NULL);
