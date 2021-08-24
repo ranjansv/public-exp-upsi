@@ -32,9 +32,12 @@ target_link_libraries(reader PRIVATE adios2::cxx11_mpi MPI::MPI_C)
 add_executable(daos-writer daos-writer.c)
 target_link_libraries(daos-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
 
+add_executable(daos-reader daos-reader.c)
+target_link_libraries(daos-reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
 
-add_executable(simple_array simple_array.c)
-target_link_libraries(simple_array PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
+
+#add_executable(simple_array simple_array.c)
+#target_link_libraries(simple_array PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
 
 #add_executable(daos-posix-writer daos-posix-writer.c)
 #target_link_libraries(daos-posix-writer PRIVATE daos daos_common dfs gurt cart  uuid cmocka daos_tests MPI::MPI_C)
