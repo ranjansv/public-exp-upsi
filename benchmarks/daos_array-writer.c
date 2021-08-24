@@ -334,7 +334,6 @@ main(int argc, char **argv)
 		ASSERT(rc == 0, "pool connect failed with %d", rc);
 	}
 
-
 	/** share pool handle with peer tasks */
 	handle_share(&poh, HANDLE_POOL, rank, poh, 1);
 
@@ -350,8 +349,6 @@ main(int argc, char **argv)
                 rc = daos_cont_open(poh, co_uuid, DAOS_COO_RW, &coh, NULL,
                                     NULL);
                 ASSERT(rc == 0, "container open failed with %d", rc);
-
-
 	}
 
 	/** share container handle with peer tasks */

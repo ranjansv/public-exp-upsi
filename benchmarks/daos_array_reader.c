@@ -185,7 +185,7 @@ array_oh_share(daos_handle_t *oh)
 }
 
 void
-write_data(size_t arr_size_mb, int steps, int async)
+read_data(size_t arr_size_mb, int steps, int async)
 {
         daos_obj_id_t   oid;
         daos_handle_t   oh;
@@ -235,16 +235,6 @@ write_data(size_t arr_size_mb, int steps, int async)
 
 	for (iter = 0; iter < steps; iter++) {
 
-
-        /** Write */
-        if (async) {
-                rc = daos_event_init(&ev, eq, NULL);
-                assert_rc_equal(rc, 0);
-        }
-        rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl,
-                              async ? &ev : NULL);
-
-        assert_rc_equal(rc, 0);
         /** Read */
         if (async) {
                 rc = daos_event_init(&ev, eq, NULL);
@@ -359,7 +349,7 @@ main(int argc, char **argv)
 
         /** the other tasks write the array */
         //array(arr_size_mb, steps);
-	write_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
+	read_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
 
 	/** close container */
 	daos_cont_close(coh, NULL);
