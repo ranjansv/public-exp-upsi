@@ -185,7 +185,7 @@ array_oh_share(daos_handle_t *oh)
 }
 
 void
-write_data(size_t arr_size_mb, int steps, int async)
+read_data(size_t arr_size_mb, int steps, int async)
 {
         daos_obj_id_t   oid;
         daos_handle_t   oh;
@@ -305,7 +305,7 @@ main(int argc, char **argv)
 
 	MPI_Comm_size(MPI_COMM_WORLD, &wrank);
 
-	const unsigned int color = 1;
+	const unsigned int color = 2;
 	MPI_Comm_split(MPI_COMM_WORLD, color, wrank, &comm); 
 
 	MPI_Comm_rank(comm, &rank);
@@ -356,7 +356,7 @@ main(int argc, char **argv)
 
         /** the other tasks write the array */
         //array(arr_size_mb, steps);
-	write_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
+	read_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
 
 	/** close container */
 	daos_cont_close(coh, NULL);

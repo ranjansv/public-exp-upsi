@@ -25,7 +25,6 @@ MPI_Comm comm;
 //#define	DSS_PSETID	 "daos_tier0"
 
 #define MB_in_bytes    1048576
-#define NUM_ELEMS       64
 static daos_ofeat_t feat = DAOS_OF_DKEY_UINT64 | DAOS_OF_KV_FLAT |
         DAOS_OF_ARRAY;
 static daos_ofeat_t featb = DAOS_OF_DKEY_UINT64 | DAOS_OF_KV_FLAT |
@@ -198,6 +197,7 @@ write_data(size_t arr_size_mb, int steps, int async)
         daos_event_t    ev, *evp;
         int             rc;
         int             iter;
+	int             num_elements;
 
         /* Temporary assignment */
         daos_size_t cell_size = 1;
@@ -211,76 +211,50 @@ write_data(size_t arr_size_mb, int steps, int async)
                 rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size,
                                        chunk_size, &oh, NULL);
                 assert_rc_equal(rc, 0);
+
+		printf("lo: %d\n", oid.lo);
+		printf("hi: %d\n", oid.hi);
         }
         array_oh_share(&oh);
 
         /** Allocate and set buffer */
-        D_ALLOC_ARRAY(wbuf, NUM_ELEMS);
+	num_elements = arr_size_mb * MB_in_bytes; 
+        D_ALLOC_ARRAY(wbuf, num_elements);
         assert_non_null(wbuf);
-        D_ALLOC_ARRAY(rbuf, NUM_ELEMS);
+        D_ALLOC_ARRAY(rbuf, num_elements);
         assert_non_null(rbuf);
-        for (i = 0; i < NUM_ELEMS; i++)
+        for (i = 0; i < num_elements; i++)
                 wbuf[i] = i+1;
 
         /** set array location */
         iod.arr_nr = 1;
-        rg.rg_len = NUM_ELEMS * sizeof(int) / cell_size;
+        rg.rg_len = num_elements * sizeof(int) / cell_size;
         rg.rg_idx = rank * rg.rg_len;
         iod.arr_rgs = &rg;
 
         /** set memory location */
         sgl.sg_nr = 1;
-        d_iov_set(&iov, wbuf, NUM_ELEMS * sizeof(int));
+        d_iov_set(&iov, wbuf, num_elements * sizeof(int));
         sgl.sg_iovs = &iov;
 
 	for (iter = 0; iter < steps; iter++) {
+            MPI_Barrier(MPI_COMM_WORLD);
+            /** Write */
+            if (async) {
+                    rc = daos_event_init(&ev, eq, NULL);
+                    assert_rc_equal(rc, 0);
+            }
+            rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl,
+                                  async ? &ev : NULL);
 
+            assert_rc_equal(rc, 0);
+	    if(rank == 0) {
+		epoch++;
+	        daos_cont_create_snap(coh, &epoch, NULL, NULL);
+	        ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
+	    }
 
-        /** Write */
-        if (async) {
-                rc = daos_event_init(&ev, eq, NULL);
-                assert_rc_equal(rc, 0);
-        }
-        rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl,
-                              async ? &ev : NULL);
-
-        assert_rc_equal(rc, 0);
-        /** Read */
-        if (async) {
-                rc = daos_event_init(&ev, eq, NULL);
-                assert_rc_equal(rc, 0);
-        }
-        d_iov_set(&iov, rbuf, NUM_ELEMS * sizeof(int));
-        sgl.sg_iovs = &iov;
-        rc = daos_array_read(oh, DAOS_TX_NONE, &iod, &sgl,
-                             async ? &ev : NULL);
-        assert_rc_equal(rc, 0);
-        if (async) {
-                /** Wait for completion */
-                rc = daos_eq_poll(eq, 0, DAOS_EQ_WAIT, 1, &evp);
-                assert_rc_equal(rc, 1);
-                assert_ptr_equal(evp, &ev);
-                assert_int_equal(evp->ev_error, 0);
-
-                rc = daos_event_fini(&ev);
-                assert_rc_equal(rc, 0);
-        }
-
-        /** Verify data */
-        if (cell_size == 1)
-                assert_int_equal(iod.arr_nr_short_read, 0);
-        for (i = 0; i < NUM_ELEMS; i++) {
-                if (wbuf[i] != rbuf[i]) {
-                        printf("Data verification failed\n");
-                        printf("%zu: written %d != read %d\n",
-                                i, wbuf[i], rbuf[i]);
-                }
-                assert_int_equal(wbuf[i], rbuf[i]);
-        }
-
-
-        MPI_Barrier(MPI_COMM_WORLD);
-
+            MPI_Barrier(MPI_COMM_WORLD);
         }
     D_FREE(rbuf);
     D_FREE(wbuf);
