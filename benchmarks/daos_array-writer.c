@@ -198,6 +198,7 @@ write_data(size_t arr_size_mb, int steps, int async)
         int             rc;
         int             iter;
 	int             num_elements;
+	daos_size_t     size;
 
         /* Temporary assignment */
         daos_size_t cell_size = 1;
@@ -218,7 +219,8 @@ write_data(size_t arr_size_mb, int steps, int async)
         array_oh_share(&oh);
 
         /** Allocate and set buffer */
-	num_elements = arr_size_mb * MB_in_bytes; 
+	num_elements = arr_size_mb ; 
+	//num_elements = arr_size_mb * MB_in_bytes; 
         D_ALLOC_ARRAY(wbuf, num_elements);
         assert_non_null(wbuf);
         D_ALLOC_ARRAY(rbuf, num_elements);
@@ -248,14 +250,21 @@ write_data(size_t arr_size_mb, int steps, int async)
                                   async ? &ev : NULL);
 
             assert_rc_equal(rc, 0);
-	    if(rank == 0) {
-		epoch++;
-	        daos_cont_create_snap(coh, &epoch, NULL, NULL);
-	        ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
-	    }
 
             MPI_Barrier(MPI_COMM_WORLD);
+	    if(rank == 0) {
+	        rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
+		printf("daos_cont_create_snap, rc = %d\n", rc);
+		printf("epoch = %lu\n", epoch);
+	        ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
+	    }
         }
+ 
+    if(rank == 0) {	
+    rc = daos_array_get_size(oh, DAOS_TX_NONE, &size, NULL);
+    ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
+    printf("Array size = %d\n", size);
+    }
     D_FREE(rbuf);
     D_FREE(wbuf);
 
@@ -268,8 +277,9 @@ main(int argc, char **argv)
 {
 	int	rc;
         uuid_parse(argv[1], pool_uuid); 
-	size_t arr_size_mb = atoi(argv[2]);
-	int steps = atoi(argv[3]);
+        uuid_parse(argv[2], co_uuid); 
+	size_t arr_size_mb = atoi(argv[3]);
+	int steps = atoi(argv[4]);
 
 	rc = gethostname(node, sizeof(node));
 	ASSERT(rc == 0, "buffer for hostname too small");
@@ -313,11 +323,11 @@ main(int argc, char **argv)
 
 	if (rank == 0) {
 		/** generate uuid for container */
-		uuid_generate(co_uuid);
+		//uuid_generate(co_uuid);
                 /** create container */
-                rc = daos_cont_create(poh, co_uuid, NULL /* properties */,
-                                      NULL /* event */);
-                ASSERT(rc == 0, "container create failed with %d", rc);
+                //rc = daos_cont_create(poh, co_uuid, NULL /* properties */,
+                //                      NULL /* event */);
+                //ASSERT(rc == 0, "container create failed with %d", rc);
 
                 /** open container */
                 rc = daos_cont_open(poh, co_uuid, DAOS_COO_RW, &coh, NULL,
@@ -334,15 +344,6 @@ main(int argc, char **argv)
 
 	/** close container */
 	daos_cont_close(coh, NULL);
-
-	/** destroy container */
-	if(rank == 0) {
-	    rc = daos_cont_destroy(poh, co_uuid, 1 /* force */, NULL);
-	    ASSERT(rc == 0, "daos_cont_destroy failed with %d", rc);
-
-	    print_message("rank 0 daos_cont_destroy()\n");
-	}
-
 
 	/** disconnect from pool & destroy it */
 	daos_pool_disconnect(poh, NULL);

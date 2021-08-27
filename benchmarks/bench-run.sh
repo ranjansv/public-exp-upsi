@@ -83,6 +83,11 @@ do
 	elif grep -q "sst" <<< "$IO_NAME"; then
 		ENG_TYPE="sst"
 		FILENAME="output.bp"
+
+	#Following engine types are for DAOS which don't use ADIOS2
+	elif grep -q "daos-array" <<< "$IO_NAME"; then
+		ENG_TYPE="daos-array"
+		FILENAME="N/A"
 	fi
 
         for DATASIZE in $TOTAL_DATA_PER_RANK
@@ -103,13 +108,36 @@ do
 	    #NR_READERS=$NR
 	    reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
 
+	    if [ $ENG_TYPE == "daos-array" ]
+            then
+		    POOL_UUID=`dmg -i pool list|tail -1|awk '{print $1}' 2> /dev/null`
+		    echo "Pool UUID: $POOL_UUID"
+
+		    POSIX_CONT_UUID=`ps aux|grep dfuse|grep 'container.*' -o|grep -o '[0-9].*$'`
+		    echo "POSIX_CONT_UUID: $POSIX_CONT_UUID"
+
+		    echo "List of containers"
+		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null
+		    echo "Destroying all containers except POSIX"
+		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
+
+		    daos cont create --pool=$POOL_UUID 2> /dev/null
+		    CONT_UUID=`daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID`
+	    fi
+
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
-               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-
-               mv writer*.log $OUTPUT_DIR/
-               mv reader*.log $OUTPUT_DIR/
+	       if [ $ENG_TYPE == "daos-array" ]
+	       then
+		   echo "Processing daos-array"
+                   perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   #perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+	       else
+                   perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   mv writer*.log $OUTPUT_DIR/
+                   mv reader*.log $OUTPUT_DIR/
+	       fi
 
 	    elif [ $BENCH_TYPE == "workflow" ]
 	    then
@@ -125,6 +153,14 @@ do
                mv writer*.log $OUTPUT_DIR/
                mv reader*.log $OUTPUT_DIR/
 	       echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+	    fi
+	    if [ $ENG_TYPE == "daos-array" ]
+            then
+
+		    #echo "Destroying all containers except POSIX"
+		    #daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
+		    #daos pool list-cont --pool=$POOL_UUID 2> /dev/null
+		    echo ""
 	    fi
         done
     done
