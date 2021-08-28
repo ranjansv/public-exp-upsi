@@ -172,7 +172,7 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(int procs, size_t arr_size_mb, int steps, int async) {
+void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -200,8 +200,6 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
                            NULL);
     assert_rc_equal(rc, 0);
 
-    printf("lo: %d\n", oid.lo);
-    printf("hi: %d\n", oid.hi);
   }
   array_oh_share(&oh);
 
@@ -232,11 +230,6 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
 
   for (iter = 0; iter < steps; iter++) {
     MPI_Barrier(MPI_COMM_WORLD);
-    /** Write */
-    if (async) {
-      rc = daos_event_init(&ev, eq, NULL);
-      assert_rc_equal(rc, 0);
-    }
     rc = daos_tx_open(coh, &th, 0, NULL);
     assert_rc_equal(rc, 0);
     rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
@@ -328,7 +321,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(arr_size_mb, steps);
-  write_data(procs, arr_size_mb, steps, 0 /* Async I/O flag False*/);
+  read_data(procs, arr_size_mb, steps, 0 /* Async I/O flag False*/);
 
   /** close container */
   daos_cont_close(coh, NULL);

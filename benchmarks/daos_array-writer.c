@@ -200,8 +200,6 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
                            NULL);
     assert_rc_equal(rc, 0);
 
-    printf("lo: %d\n", oid.lo);
-    printf("hi: %d\n", oid.hi);
   }
   array_oh_share(&oh);
 
@@ -230,6 +228,8 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
 
   daos_handle_t th;
 
+  char snapshot_name[50];
+
   for (iter = 0; iter < steps; iter++) {
     MPI_Barrier(MPI_COMM_WORLD);
     /** Write */
@@ -249,7 +249,8 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (rank == 0) {
-      rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
+      sprintf(snapshot_name, "snapshot-", iter + 1);
+      rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
