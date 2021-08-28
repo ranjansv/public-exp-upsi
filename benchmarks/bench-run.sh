@@ -182,5 +182,5 @@ cp /etc/daos/daos_server.yml export-$RESULT_DIR/
 
 #find $RESULT_DIR/ -iname 'stdout*.log'|xargs cat
 
-
+source ./daos-list-cont.sh
 
