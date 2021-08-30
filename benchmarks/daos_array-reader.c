@@ -23,6 +23,7 @@ MPI_Comm comm;
 /** Name of the process set associated with the DAOS server */
 #define DSS_PSETID "daos_server"
 //#define	DSS_PSETID	 "daos_tier0"
+#define NUM_OBJS 1
 
 #define MB_in_bytes 1048576
 static daos_ofeat_t feat =
@@ -175,6 +176,7 @@ static void array_oh_share(daos_handle_t *oh) {
 void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
+  daos_handle_t th;
   daos_array_iod_t iod;
   daos_range_t rg;
   d_sg_list_t sgl;
@@ -191,29 +193,29 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = 2097152;
   //static daos_size_t chunk_size = 16;
+  daos_obj_id_t   oids[NUM_OBJS];
+  uint32_t        oids_nr;
+  daos_anchor_t anchor;
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  /** create the array on rank 0 and share the oh. */
-  if (rank == 0) {
-    oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0, 0);
-    rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size, chunk_size, &oh,
-                           NULL);
-    assert_rc_equal(rc, 0);
+  int num_snapshots;
+  char list_snapnames[steps][50]; 
+  daos_epoch_t epochs[steps];
 
-  }
-  array_oh_share(&oh);
+  oids_nr = 0;
+  for(iter = 0; iter < NUM_OBJS; iter++) 
+    memset(&oids[iter], 0, sizeof(daos_obj_id_t));
 
-  /** Allocate and set buffer */
-  // num_elements = arr_size_mb ;
   if (rank == 0)
 	  printf("arr_size_mb = %d\n", arr_size_mb);
+    memset(&anchor, 0, sizeof(anchor));
+    rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames, &anchor, NULL);
+    ASSERT(rc == 0, "daos_cont_list_snap failed with %d", rc);
+
   num_elements = arr_size_mb * MB_in_bytes/ procs;
   D_ALLOC_ARRAY(wbuf, num_elements);
   assert_non_null(wbuf);
   D_ALLOC_ARRAY(rbuf, num_elements);
   assert_non_null(rbuf);
-  for (i = 0; i < num_elements; i++)
-    wbuf[i] = i + 1;
 
   /** set array location */
   iod.arr_nr = 1;
@@ -226,34 +228,27 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   d_iov_set(&iov, wbuf, num_elements * sizeof(char));
   sgl.sg_iovs = &iov;
 
-  daos_handle_t th;
-
   for (iter = 0; iter < steps; iter++) {
     MPI_Barrier(MPI_COMM_WORLD);
-    rc = daos_tx_open(coh, &th, 0, NULL);
-    assert_rc_equal(rc, 0);
-    rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
-    //rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
-    assert_rc_equal(rc, 0);
-    rc = daos_tx_commit(th, NULL);
-    assert_rc_equal(rc, 0);
-    rc = daos_tx_close(th, NULL);
-    assert_rc_equal(rc, 0);
+
+    printf("rank %d epoch: %lu\n", rank, epochs[iter]);
+
+    //rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
+    //ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
+
+    rc = daos_oit_open(coh, epochs[iter], &oh, NULL);
+    ASSERT(rc == 0, "daos_oit_open failed with %d", rc);
+
+    memset(&anchor, 0, sizeof(anchor));
+    rc = daos_oit_list(oh, oids, &oids_nr, &anchor, NULL);
+    ASSERT(rc == 0, "daos_oit_list failed with %d", rc);
+
+    rc = daos_oit_close(oh, NULL);
+    ASSERT(rc == 0, "daos_oit_close failed with %d", rc);
 
     MPI_Barrier(MPI_COMM_WORLD);
-    if (rank == 0) {
-      rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
-      printf("daos_cont_create_snap, rc = %d\n", rc);
-      printf("epoch = %lu\n", epoch);
-      ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
-    }
   }
 
-  if (rank == 0) {
-    rc = daos_array_get_size(oh, DAOS_TX_NONE, &size, NULL);
-    ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
-    printf("Array size = %d\n", size);
-  }
   D_FREE(rbuf);
   D_FREE(wbuf);
 }

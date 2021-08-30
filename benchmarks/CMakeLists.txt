@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 project(benchmark C CXX)
-#set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Debug)
 
 #set(CMAKE_CXX_FLAGS "-fpic -g -std=c++11 -Wno-write-strings") 
 #set(CMAKE_CXX_FLAGS "-D_GLIBCXX_USE_CXX11_ABI=0 -std=c++11")

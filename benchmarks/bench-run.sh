@@ -131,7 +131,7 @@ do
 	       then
 		   echo "Processing daos-array"
                    perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   #perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
                    perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                    perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log

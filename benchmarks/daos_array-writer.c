@@ -227,8 +227,13 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
   sgl.sg_iovs = &iov;
 
   daos_handle_t th;
-
   char snapshot_name[50];
+
+  int num_snapshots = 0;
+  daos_epoch_t epochs[steps];
+  char list_snapnames[steps][50];
+  daos_anchor_t anchor;
+  memset(&anchor, 0, sizeof(anchor));
 
   for (iter = 0; iter < steps; iter++) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -249,8 +254,9 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (rank == 0) {
-      sprintf(snapshot_name, "snapshot-", iter + 1);
-      rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
+      //sprintf(snapshot_name, "snapshot-", iter + 1);
+      //rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
+      rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
@@ -261,6 +267,11 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
     rc = daos_array_get_size(oh, DAOS_TX_NONE, &size, NULL);
     ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
     printf("Array size = %d\n", size);
+
+    rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames, &anchor, NULL);
+    ASSERT(rc == 0, "daos_cont_list_snap failed with %d", rc);
+
+    printf("Number of snapshots: %d\n", num_snapshots);
   }
   D_FREE(rbuf);
   D_FREE(wbuf);
