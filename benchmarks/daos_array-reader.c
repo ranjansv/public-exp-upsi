@@ -192,26 +192,27 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   /* Temporary assignment */
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = 2097152;
-  //static daos_size_t chunk_size = 16;
-  daos_obj_id_t   oids[NUM_OBJS];
-  uint32_t        oids_nr;
+  // static daos_size_t chunk_size = 16;
+  daos_obj_id_t oids[NUM_OBJS];
+  uint32_t oids_nr;
   daos_anchor_t anchor;
 
   int num_snapshots;
-  char list_snapnames[steps][50]; 
+  char list_snapnames[steps][50];
   daos_epoch_t epochs[steps];
 
   oids_nr = 0;
-  for(iter = 0; iter < NUM_OBJS; iter++) 
+  for (iter = 0; iter < NUM_OBJS; iter++)
     memset(&oids[iter], 0, sizeof(daos_obj_id_t));
 
   if (rank == 0)
-	  printf("arr_size_mb = %d\n", arr_size_mb);
-    memset(&anchor, 0, sizeof(anchor));
-    rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames, &anchor, NULL);
-    ASSERT(rc == 0, "daos_cont_list_snap failed with %d", rc);
+    printf("arr_size_mb = %d\n", arr_size_mb);
+  memset(&anchor, 0, sizeof(anchor));
+  rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames, &anchor,
+                           NULL);
+  ASSERT(rc == 0, "daos_cont_list_snap failed with %d", rc);
 
-  num_elements = arr_size_mb * MB_in_bytes/ procs;
+  num_elements = arr_size_mb * MB_in_bytes / procs;
   D_ALLOC_ARRAY(wbuf, num_elements);
   assert_non_null(wbuf);
   D_ALLOC_ARRAY(rbuf, num_elements);
@@ -233,8 +234,8 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
 
     printf("rank %d epoch: %lu\n", rank, epochs[iter]);
 
-    //rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
-    //ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
+    // rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
+    // ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
 
     rc = daos_oit_open(coh, epochs[iter], &oh, NULL);
     ASSERT(rc == 0, "daos_oit_open failed with %d", rc);
