@@ -130,7 +130,7 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 		   echo "Processing daos-array"
-                   perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
                    perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
                    perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
@@ -141,26 +141,26 @@ do
 
 	    elif [ $BENCH_TYPE == "workflow" ]
 	    then
+	       if [ $ENG_TYPE == "daos-array" ]
+	       then
+	           START_TIME=$SECONDS
+                   perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-               #echo "writer arguments $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS "
-               #echo "reader arguments $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS"
+                   mv writer*.log $OUTPUT_DIR/
+                   mv reader*.log $OUTPUT_DIR/
+	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+	       else 
+	           START_TIME=$SECONDS
+                   perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-	       START_TIME=$SECONDS
-               perf stat -d -d -d numactl -m 1 mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-               perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-	       ELAPSED_TIME=$(($SECONDS - $START_TIME))
-
-               mv writer*.log $OUTPUT_DIR/
-               mv reader*.log $OUTPUT_DIR/
-	       echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-	    fi
-	    if [ $ENG_TYPE == "daos-array" ]
-            then
-
-		    #echo "Destroying all containers except POSIX"
-		    #daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
-		    #daos pool list-cont --pool=$POOL_UUID 2> /dev/null
-		    echo ""
+                   mv writer*.log $OUTPUT_DIR/
+                   mv reader*.log $OUTPUT_DIR/
+	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+	       fi
 	    fi
         done
     done

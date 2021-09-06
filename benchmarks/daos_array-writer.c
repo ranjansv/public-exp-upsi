@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -172,6 +174,12 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+// structure for message queue
+typedef struct mesg_buffer {
+  long mesg_type;
+  char mesg_text[100];
+} MesQ;
+
 void write_data(int procs, size_t arr_size_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
@@ -187,10 +195,14 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
   int num_elements;
   daos_size_t size;
 
+  MesQ send_q;
+  key_t key;
+  int msgid;
+
   /* Temporary assignment */
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = 2097152;
-  //static daos_size_t chunk_size = 16;
+  // static daos_size_t chunk_size = 16;
 
   MPI_Barrier(MPI_COMM_WORLD);
   /** create the array on rank 0 and share the oh. */
@@ -200,14 +212,24 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
                            NULL);
     assert_rc_equal(rc, 0);
 
+    key = ftok("oidfile", 65);
+    // msgget creates a message queue
+    // and returns identifier
+    msgid = msgget(key, 0666 | IPC_CREAT);
+    send_q.mesg_type = 1;
+    sprintf(send_q.mesg_text, "%lu", oid.lo);
+    msgsnd(msgid, &send_q, sizeof(send_q), 0);
+    sprintf(send_q.mesg_text, "%lu", oid.hi);
+    msgsnd(msgid, &send_q, sizeof(send_q), 0);
+    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
   }
   array_oh_share(&oh);
 
   /** Allocate and set buffer */
   // num_elements = arr_size_mb ;
   if (rank == 0)
-	  printf("arr_size_mb = %d\n", arr_size_mb);
-  num_elements = arr_size_mb * MB_in_bytes/ procs;
+    printf("arr_size_mb = %d\n", arr_size_mb);
+  num_elements = arr_size_mb * MB_in_bytes / procs;
   D_ALLOC_ARRAY(wbuf, num_elements);
   assert_non_null(wbuf);
   D_ALLOC_ARRAY(rbuf, num_elements);
@@ -238,28 +260,30 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
   for (iter = 0; iter < steps; iter++) {
     MPI_Barrier(MPI_COMM_WORLD);
     /** Write */
-    if (async) {
-      rc = daos_event_init(&ev, eq, NULL);
-      assert_rc_equal(rc, 0);
-    }
-    rc = daos_tx_open(coh, &th, 0, NULL);
+    // if (async) {
+    //  rc = daos_event_init(&ev, eq, NULL);
+    //  assert_rc_equal(rc, 0);
+    //}
+    // rc = daos_tx_open(coh, &th, 0, NULL);
+    // assert_rc_equal(rc, 0);
+    // rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
+    rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
-    rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
-    //rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
-    assert_rc_equal(rc, 0);
-    rc = daos_tx_commit(th, NULL);
-    assert_rc_equal(rc, 0);
-    rc = daos_tx_close(th, NULL);
-    assert_rc_equal(rc, 0);
+    // rc = daos_tx_commit(th, NULL);
+    // assert_rc_equal(rc, 0);
+    // rc = daos_tx_close(th, NULL);
+    // assert_rc_equal(rc, 0);
 
     MPI_Barrier(MPI_COMM_WORLD);
     if (rank == 0) {
-      //sprintf(snapshot_name, "snapshot-", iter + 1);
-      //rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
+      // sprintf(snapshot_name, "snapshot-", iter + 1);
+      // rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
       rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
+      sprintf(send_q.mesg_text, "%lu", epoch);
+      msgsnd(msgid, &send_q, sizeof(send_q), 0);
     }
   }
 
@@ -268,7 +292,8 @@ void write_data(int procs, size_t arr_size_mb, int steps, int async) {
     ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
     printf("Array size = %d\n", size);
 
-    rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames, &anchor, NULL);
+    rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames,
+                             &anchor, NULL);
     ASSERT(rc == 0, "daos_cont_list_snap failed with %d", rc);
 
     printf("Number of snapshots: %d\n", num_snapshots);

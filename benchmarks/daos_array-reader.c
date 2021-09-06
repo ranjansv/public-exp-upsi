@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -173,6 +175,12 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
+// structure for message queue
+typedef struct mesg_buffer {
+  long mesg_type;
+  char mesg_text[100];
+} MesQ;
+
 void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
@@ -188,6 +196,11 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   int iter;
   int num_elements;
   daos_size_t size;
+  char *eptr;
+
+  MesQ recv_q;
+  key_t key;
+  int msgid;
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
@@ -205,12 +218,29 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   for (iter = 0; iter < NUM_OBJS; iter++)
     memset(&oids[iter], 0, sizeof(daos_obj_id_t));
 
-  if (rank == 0)
+  if (rank == 0) {
     printf("arr_size_mb = %d\n", arr_size_mb);
-  memset(&anchor, 0, sizeof(anchor));
-  rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames, &anchor,
-                           NULL);
-  ASSERT(rc == 0, "daos_cont_list_snap failed with %d", rc);
+    key = ftok("oidfile", 65);
+    // msgget creates a message queue
+    // and returns identifier
+    msgid = msgget(key, 0666 | IPC_CREAT);
+
+    // msgrcv to receive message
+    msgrcv(msgid, &recv_q, sizeof(recv_q), 1, 0);
+    oid.lo = strtoul(recv_q.mesg_text, &eptr, 10);
+    msgrcv(msgid, &recv_q, sizeof(recv_q), 1, 0);
+    oid.hi = strtoul(recv_q.mesg_text, &eptr, 10);
+    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
+    // msgctl(msgid, IPC_RMID, NULL);
+  }
+  rc = MPI_Bcast(&oid.lo, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+  assert_int_equal(rc, MPI_SUCCESS);
+  rc = MPI_Bcast(&oid.hi, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+  assert_int_equal(rc, MPI_SUCCESS);
+
+  if (rank) {
+    printf("rank = %d, oid.lo = %lu, oid.hi = %lu\n", rank, oid.lo, oid.hi);
+  }
 
   num_elements = arr_size_mb * MB_in_bytes / procs;
   D_ALLOC_ARRAY(wbuf, num_elements);
@@ -232,23 +262,43 @@ void read_data(int procs, size_t arr_size_mb, int steps, int async) {
   for (iter = 0; iter < steps; iter++) {
     MPI_Barrier(MPI_COMM_WORLD);
 
-    printf("rank %d epoch: %lu\n", rank, epochs[iter]);
+    if (rank == 0) {
+      printf("Waiting to read epoch of snapshot %d\n", iter + 1);
+      msgrcv(msgid, &recv_q, sizeof(recv_q), 1, 0);
+      epochs[iter] = strtoul(recv_q.mesg_text, &eptr, 10);
+    }
+    // MPI share epoch
+    rc = MPI_Bcast(&epochs[iter], 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
+    assert_int_equal(rc, MPI_SUCCESS);
+    printf("iter %d rank %d epoch: %lu\n", iter, rank, epochs[iter]);
 
-    // rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
-    // ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
+    rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
+    ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
 
-    rc = daos_oit_open(coh, epochs[iter], &oh, NULL);
-    ASSERT(rc == 0, "daos_oit_open failed with %d", rc);
+    rc = daos_array_open(coh, oid, th, DAOS_OO_RW, &cell_size, &chunk_size, &oh,
+                         NULL);
+    ASSERT(rc == 0, "daos_array_open failed with %d", rc);
 
-    memset(&anchor, 0, sizeof(anchor));
-    rc = daos_oit_list(oh, oids, &oids_nr, &anchor, NULL);
-    ASSERT(rc == 0, "daos_oit_list failed with %d", rc);
+    rc = daos_array_read(oh, th, &iod, &sgl, NULL);
+    ASSERT(rc == 0, "daos_array_read failed with %d", rc);
 
-    rc = daos_oit_close(oh, NULL);
-    ASSERT(rc == 0, "daos_oit_close failed with %d", rc);
+    rc = daos_array_close(oh, NULL);
+    ASSERT(rc == 0, "daos_array_close failed with %d", rc);
+
+    // rc = daos_oit_open(coh, epochs[iter], &oh, NULL);
+    // ASSERT(rc == 0, "daos_oit_open failed with %d", rc);
+
+    // memset(&anchor, 0, sizeof(anchor));
+    // rc = daos_oit_list(oh, oids, &oids_nr, &anchor, NULL);
+    // ASSERT(rc == 0, "daos_oit_list failed with %d", rc);
+
+    // rc = daos_oit_close(oh, NULL);
+    // ASSERT(rc == 0, "daos_oit_close failed with %d", rc);
 
     MPI_Barrier(MPI_COMM_WORLD);
   }
+  if (rank == 0)
+    msgctl(msgid, IPC_RMID, NULL);
 
   D_FREE(rbuf);
   D_FREE(wbuf);
