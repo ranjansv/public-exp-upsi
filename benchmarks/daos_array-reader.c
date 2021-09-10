@@ -181,7 +181,7 @@ typedef struct mesg_buffer {
   char mesg_text[100];
 } MesQ;
 
-void read_data(int procs, size_t arr_size_mb, int steps, int async) {
+void read_data(size_t arr_size_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_handle_t th;
@@ -367,7 +367,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(arr_size_mb, steps);
-  read_data(procs, arr_size_mb, steps, 0 /* Async I/O flag False*/);
+  read_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
 
   /** close container */
   daos_cont_close(coh, NULL);

@@ -1,3 +1,5 @@
+#Before running cmake and make source /work2/06753/soychan/frontera/4NODE/BUILDS/files/env_daos
+
 cmake_minimum_required(VERSION 3.12)
 project(benchmark C CXX)
 set(CMAKE_BUILD_TYPE Debug)
@@ -15,13 +17,14 @@ find_package(ADIOS2 REQUIRED)
 
 #include_directories(/home/ranjan/next-project/daos/src/include)
 #include_directories(/home/ranjan/next-project/daos/install/include/)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/pmdk/include/)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/isal/include)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/isal_crypto/include)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/argobots/include/)
-include_directories(/home/ranjan/next-project/daos/install/prereq/dev/protobufc/include)
-#include_directories(/home/ranjan/next-project/daos/src/tests)
-link_directories(/home/ranjan/next-project/daos/install/lib64)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/prereq/dev/pmdk/include/)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/prereq/dev/isal/include)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/prereq/dev/isal_crypto/include)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/prereq/dev/argobots/include/)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/prereq/dev/protobufc/include)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/src/tests)
+include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/src/include)
+link_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64)
 
 add_executable(writer writer.cpp)
 target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C )
