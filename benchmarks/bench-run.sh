@@ -15,7 +15,6 @@ rm results/latest
 ln -s $TIMESTAMP results/latest
 
 mount > $RESULT_DIR/fs-mounts.log
-cp /etc/daos/daos_server.yml $RESULT_DIR/
 git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
@@ -177,7 +176,6 @@ cp $RESULT_DIR/csv/*.csv export-${RESULT_DIR}/csv/
 cp ${CONFIG_FILE} export-$RESULT_DIR/config.sh
 cp ./adios2.xml export-$RESULT_DIR
 mount|grep dax > export-$RESULT_DIR/fs-type.log
-cp /etc/daos/daos_server.yml export-$RESULT_DIR/
 
 
 #find $RESULT_DIR/ -iname 'stdout*.log'|xargs cat
