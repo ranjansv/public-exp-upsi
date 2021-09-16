@@ -1,5 +1,6 @@
 BENCH_TYPE="workflow"
-ENGINE="daos-posix:pmem daos-array"
+ENGINE="daos-array"
+#ENGINE="daos-posix:pmem daos-array"
 TOTAL_DATA_PER_RANK="512 1024 2048"
 STEPS=8
 PROCS="24"
