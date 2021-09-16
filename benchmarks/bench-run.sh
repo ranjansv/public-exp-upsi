@@ -8,20 +8,22 @@ source ${CONFIG_FILE}
 
 #Create timestamped output directory
 TIMESTAMP=`echo $(date +%Y-%m-%d-%H:%M:%S)`
-RESULT_DIR="results/$TIMESTAMP"
+RESULT_DIR="$WORK2/results/$TIMESTAMP"
 mkdir -p $RESULT_DIR
 
-rm results/latest
-ln -s $TIMESTAMP results/latest
+rm $WORK2/results/latest
+ln -s $TIMESTAMP $WORK2/results/latest
 
-mount > $RESULT_DIR/fs-mounts.log
+#mount > $RESULT_DIR/fs-mounts.log
 git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Build source
+module load intel/19.1.1
 cd build
 make clean && make
 cd ..
+module unload intel/19.1.1
 
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
@@ -58,6 +60,18 @@ fi
 
 rm writer-*.log reader-*.log &> /dev/null
 
+BENCH_DIR="/home1/08059/ranjansv/exp-upsi/benchmarks"
+
+is_daos_agent_running=`pgrep daos_agent`
+echo $is_daos_agent_running
+if [[ $is_daos_agent_running -eq "" ]]
+then
+   $HOME/bin/daos_startup.sh
+else
+   echo "daos_agent is already running"
+fi
+
+
 for NR in $PROCS
 do
     for IO_NAME in $ENGINE
@@ -66,19 +80,19 @@ do
 	if grep -q "daos-posix" <<< "$IO_NAME"; then
 		ENG_TYPE="posix"
 	        if grep -q "pmem" <<< "$IO_NAME"; then
-		    FILENAME="/mnt/dfuse/output.bp"
+		    FILENAME="$BENCH_DIR/dfuse/output.bp"
 	        elif grep -q "dram" <<< "$IO_NAME"; then
-		    FILENAME="/mnt/dfuse/output.bp"
+		    FILENAME="$BENCH_DIR/dfuse/output.bp"
 		fi
                 writer_firstcpu=28
                 reader_firstcpu=0
 	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
 	#	ENG_TYPE="daos-transport"
-	elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
-		ENG_TYPE="posix"
-		FILENAME="/mnt/pmem0/output.bp"
-                writer_firstcpu=0
-                reader_firstcpu=28
+	#elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
+	#	ENG_TYPE="posix"
+	#	FILENAME="/mnt/pmem0/output.bp"
+        #        writer_firstcpu=0
+        #        reader_firstcpu=28
 	elif grep -q "sst" <<< "$IO_NAME"; then
 		ENG_TYPE="sst"
 		FILENAME="output.bp"
@@ -97,8 +111,6 @@ do
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
-	    rm -rf /mnt/dfuse/output.bp &> /dev/null
-	    rm -rf /mnt/pmem0/output.bp &> /dev/null
 
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
@@ -109,16 +121,12 @@ do
 
 	    if [ $ENG_TYPE == "daos-array" ]
             then
-		    POOL_UUID=`dmg -i pool list|tail -1|awk '{print $1}' 2> /dev/null`
 		    echo "Pool UUID: $POOL_UUID"
-
-		    POSIX_CONT_UUID=`ps aux|grep dfuse|grep 'container.*' -o|grep -o '[0-9].*$'`
-		    echo "POSIX_CONT_UUID: $POSIX_CONT_UUID"
 
 		    echo "List of containers"
 		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null
-		    echo "Destroying all containers except POSIX"
-		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
+		    echo "Destroying all containers "
+		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
 
 		    daos cont create --pool=$POOL_UUID 2> /dev/null
 		    CONT_UUID=`daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID`
