@@ -129,7 +129,8 @@ do
 		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
 
 		    daos cont create --pool=$POOL_UUID 2> /dev/null
-		    CONT_UUID=`daos pool list-cont --pool=$POOL_UUID 2> /dev/null|grep -v $POSIX_CONT_UUID`
+		    CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
+                    echo "New container UUID: $CONT_UUID"
 	    fi
 
 	    if [ $BENCH_TYPE == "writer" ]
