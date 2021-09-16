@@ -156,8 +156,8 @@ do
                    perf stat -d -d -d numactl -m 0 mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-                   mv writer*.log $OUTPUT_DIR/
-                   mv reader*.log $OUTPUT_DIR/
+                   #mv writer*.log $OUTPUT_DIR/
+                   #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
 	           START_TIME=$SECONDS
