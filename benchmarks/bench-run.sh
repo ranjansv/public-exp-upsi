@@ -29,34 +29,6 @@ module unload intel/19.1.1
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 cp ./adios2.xml $RESULT_DIR
 
-if [ $WRITER_NUMA == $READER_NUMA ]; 
-then   
-	echo "Both writers and readers are placed on the same socket" > $RESULT_DIR/error.log
-	exit 1
-fi
-
-if [ $WRITER_NUMA == "local" ];
-then
-        writer_firstcpu=28
-else
-        writer_firstcpu=0
-fi
-
-if [ $READER_NUMA == "local" ];
-then
-        reader_firstcpu=28
-else
-        reader_firstcpu=0
-fi
-
-
-#if [ $WRITER_NUMA == "local" ] && [ $READER_NUMA == "local" ];
-#then   
-#       reader_lastcpu=55
-#       reader_firstcpu=$(( $reader_lastcpu - $thr + 1))
-#else   
-#       reader_lastcpu=$(( $reader_firstcpu + ${thr} - 1))
-#fi
 
 rm writer-*.log reader-*.log &> /dev/null
 
@@ -84,15 +56,11 @@ do
 	        elif grep -q "dram" <<< "$IO_NAME"; then
 		    FILENAME="$BENCH_DIR/dfuse/output.bp"
 		fi
-                writer_firstcpu=28
-                reader_firstcpu=0
 	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
 	#	ENG_TYPE="daos-transport"
 	#elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
 	#	ENG_TYPE="posix"
 	#	FILENAME="/mnt/pmem0/output.bp"
-        #        writer_firstcpu=0
-        #        reader_firstcpu=28
 	elif grep -q "sst" <<< "$IO_NAME"; then
 		ENG_TYPE="sst"
 		FILENAME="output.bp"
@@ -115,9 +83,7 @@ do
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-            writer_lastcpu=$(( $writer_firstcpu + ${NR} - 1))
 	    #NR_READERS=$NR
-	    reader_lastcpu=$(( $reader_firstcpu + ${NR_READERS} - 1))
 
 	    if [ $ENG_TYPE == "daos-array" ]
             then
@@ -131,6 +97,7 @@ do
 		    daos cont create --pool=$POOL_UUID 2> /dev/null
 		    CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
                     echo "New container UUID: $CONT_UUID"
+
 	    fi
 
 	    if [ $BENCH_TYPE == "writer" ]
@@ -138,11 +105,13 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 		   echo "Processing daos-array"
-                   perf stat -d -d -d  mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
-                   perf stat -d -d -d  mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                     ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
+                     ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
-                   perf stat -d -d -d  mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   perf stat -d -d -d  mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   module load intel/19.1.1
+                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   module unload intel/19.1.1
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
 	       fi
@@ -152,18 +121,20 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   perf stat -d -d -d  mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   perf stat -d -d -d  mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    #mv writer*.log $OUTPUT_DIR/
                    #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
+                   module load intel/19.1.1
 	           START_TIME=$SECONDS
-                   perf stat -d -d -d  mpirun --cpu-set ${writer_firstcpu}-${writer_lastcpu}  -np $NR --bind-to core --mca btl tcp,self build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   perf stat -d -d -d  mpirun --cpu-set ${reader_firstcpu}-${reader_lastcpu}  -np ${NR_READERS} --bind-to core --mca btl tcp,self build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+                   module unload intel/19.1.1
 
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
