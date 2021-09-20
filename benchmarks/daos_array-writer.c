@@ -198,6 +198,8 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   MesQ send_q;
   key_t key;
   int msgid;
+  FILE *fp;
+  char buf[100];
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
@@ -212,16 +214,13 @@ void write_data(size_t arr_size_mb, int steps, int async) {
                            NULL);
     assert_rc_equal(rc, 0);
 
-    key = ftok("oidfile", 65);
-    // msgget creates a message queue
-    // and returns identifier
-    msgid = msgget(key, 0666 | IPC_CREAT);
-    send_q.mesg_type = 1;
-    sprintf(send_q.mesg_text, "%lu", oid.lo);
-    msgsnd(msgid, &send_q, sizeof(send_q), 0);
-    sprintf(send_q.mesg_text, "%lu", oid.hi);
-    msgsnd(msgid, &send_q, sizeof(send_q), 0);
-    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
+    fp = fopen("./share/oid_lo.txt","w");
+    fprintf(fp,"%lu",oid.lo);
+    fclose(fp);
+
+    fp = fopen("./share/oid_hi.txt","w");
+    fprintf(fp,"%lu",oid.hi);
+    fclose(fp);
   }
   array_oh_share(&oh);
 
@@ -282,8 +281,11 @@ void write_data(size_t arr_size_mb, int steps, int async) {
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
-      sprintf(send_q.mesg_text, "%lu", epoch);
-      msgsnd(msgid, &send_q, sizeof(send_q), 0);
+      sprintf(buf,"./share/container-snap-%d.txt",iter);
+
+      fp = fopen(buf,"w");
+      fprintf(fp,"%lu", epoch);
+      fclose(fp);
     }
   }
 

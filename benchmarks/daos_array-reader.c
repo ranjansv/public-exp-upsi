@@ -201,6 +201,8 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   MesQ recv_q;
   key_t key;
   int msgid;
+  FILE *fp;
+  char buf[100];
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
@@ -220,16 +222,14 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
   if (rank == 0) {
     printf("arr_size_mb = %d\n", arr_size_mb);
-    key = ftok("oidfile", 65);
-    // msgget creates a message queue
-    // and returns identifier
-    msgid = msgget(key, 0666 | IPC_CREAT);
-
-    // msgrcv to receive message
-    msgrcv(msgid, &recv_q, sizeof(recv_q), 1, 0);
-    oid.lo = strtoul(recv_q.mesg_text, &eptr, 10);
-    msgrcv(msgid, &recv_q, sizeof(recv_q), 1, 0);
-    oid.hi = strtoul(recv_q.mesg_text, &eptr, 10);
+    while((fp = fopen("share/oid_lo.txt","r")) == NULL)
+        usleep(1000);
+    fscanf(fp,"%lu", &oid.lo);
+    fclose(fp);
+    while((fp = fopen("share/oid_hi.txt","r")) == NULL)
+        usleep(1000);
+    fscanf(fp,"%lu", &oid.hi);
+    fclose(fp);
     printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
     // msgctl(msgid, IPC_RMID, NULL);
   }
@@ -264,8 +264,11 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
     if (rank == 0) {
       printf("Waiting to read epoch of snapshot %d\n", iter + 1);
-      msgrcv(msgid, &recv_q, sizeof(recv_q), 1, 0);
-      epochs[iter] = strtoul(recv_q.mesg_text, &eptr, 10);
+      sprintf(buf,"share/container-snap-%d.txt",iter);
+    while((fp = fopen(buf,"r")) == NULL)
+        usleep(1000);
+    fscanf(fp,"%lu", &epochs[iter]);
+    fclose(fp);
     }
     // MPI share epoch
     rc = MPI_Bcast(&epochs[iter], 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
