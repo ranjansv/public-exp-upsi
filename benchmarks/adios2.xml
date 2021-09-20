@@ -33,6 +33,7 @@
         <engine type="SST">
             <parameter key="RendezvousReaderCount" value="0"/>
             <parameter key="SpeculativePreloadMode" value="OFF"/>
+            <parameter key="DataTransport" value="fabric"/>
         </engine>
     </io>
 </adios-config>
