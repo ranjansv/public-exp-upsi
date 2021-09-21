@@ -32,7 +32,6 @@ cp ./adios2.xml $RESULT_DIR
 
 rm writer-*.log reader-*.log &> /dev/null
 
-BENCH_DIR="/home1/08059/ranjansv/exp-upsi/benchmarks"
 
 is_daos_agent_running=`pgrep daos_agent`
 echo $is_daos_agent_running
@@ -51,11 +50,7 @@ do
 	#Parse IO_NAME for engine and storage type in case of DAOS
 	if grep -q "daos-posix" <<< "$IO_NAME"; then
 		ENG_TYPE="posix"
-	        if grep -q "pmem" <<< "$IO_NAME"; then
-		    FILENAME="$BENCH_DIR/dfuse/output.bp"
-	        elif grep -q "dram" <<< "$IO_NAME"; then
-		    FILENAME="$BENCH_DIR/dfuse/output.bp"
-		fi
+		FILENAME="./mnt/dfuse/output.bp"
 	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
 	#	ENG_TYPE="daos-transport"
 	#elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
@@ -85,19 +80,26 @@ do
             mkdir -p $OUTPUT_DIR
 	    #NR_READERS=$NR
 
-	    if [ $ENG_TYPE == "daos-array" ]
+	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "posix" ]]
             then
 		    echo "Pool UUID: $POOL_UUID"
-
 		    echo "List of containers"
 		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null
 		    echo "Destroying all containers "
 		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
-
-		    daos cont create --pool=$POOL_UUID 2> /dev/null
+                    if [ $ENG_TYPE == "daos-array" ]
+		    then
+		        daos cont create --pool=$POOL_UUID 2> /dev/null
+			export  I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
+		    elif [ $ENG_TYPE == "posix" ]
+		    then
+		        daos cont create --pool=$POOL_UUID --type=POSIX 2> /dev/null
+			dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
+			dfuse_pid=`pgrep dfuse`
+			echo "PID of dfuse: $dfuse_pid"
+		    fi
 		    CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
                     echo "New container UUID: $CONT_UUID"
-
 	    fi
 
 	    if [ $BENCH_TYPE == "writer" ]
