@@ -6,6 +6,7 @@
 #include <sys/msg.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 #include "suite/daos_test.h"
@@ -200,6 +201,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   int msgid;
   FILE *fp;
   char buf[100];
+  int fd;
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
@@ -215,10 +217,14 @@ void write_data(size_t arr_size_mb, int steps, int async) {
     assert_rc_equal(rc, 0);
 
     fp = fopen("./share/oid_lo.txt","w");
+    fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) exit(1);
     fprintf(fp,"%lu",oid.lo);
     fclose(fp);
 
     fp = fopen("./share/oid_hi.txt","w");
+    fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) exit(1);
     fprintf(fp,"%lu",oid.hi);
     fclose(fp);
   }
@@ -284,6 +290,8 @@ void write_data(size_t arr_size_mb, int steps, int async) {
       sprintf(buf,"./share/container-snap-%d.txt",iter);
 
       fp = fopen(buf,"w");
+    fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) exit(1);
       fprintf(fp,"%lu", epoch);
       fclose(fp);
     }

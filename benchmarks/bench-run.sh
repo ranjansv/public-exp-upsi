@@ -19,16 +19,18 @@ git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Build source
-module load intel/19.1.1
+#module load intel/19.1.1
 cd build
 make clean && make
 cd ..
-module unload intel/19.1.1
+#module unload intel/19.1.1
 
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 cp ./adios2.xml $RESULT_DIR
 
+SCRIPT_NAME=`basename "$0"`
+cp ./$SCRIPT_NAME  $RESULT_DIR/
 
 rm writer-*.log reader-*.log &> /dev/null
 
@@ -82,24 +84,27 @@ do
 
 	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "posix" ]]
             then
+                    #module unload intel/19.1.1
 		    echo "Pool UUID: $POOL_UUID"
 		    echo "List of containers"
-		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null
+		    daos pool list-cont --pool=$POOL_UUID
 		    echo "Destroying all containers "
-		    daos pool list-cont --pool=$POOL_UUID 2> /dev/null|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID 2> /dev/null"
+		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
                     if [ $ENG_TYPE == "daos-array" ]
 		    then
-		        daos cont create --pool=$POOL_UUID 2> /dev/null
+		        daos cont create --pool=$POOL_UUID 
+		        CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
+                        echo "New container UUID: $CONT_UUID"
 			export  I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
 		    elif [ $ENG_TYPE == "posix" ]
 		    then
-		        daos cont create --pool=$POOL_UUID --type=POSIX 2> /dev/null
+		        daos cont create --pool=$POOL_UUID --type=POSIX
+		        CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
+                        echo "New container UUID: $CONT_UUID"
 			dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
 			dfuse_pid=`pgrep dfuse`
 			echo "PID of dfuse: $dfuse_pid"
 		    fi
-		    CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
-                    echo "New container UUID: $CONT_UUID"
 	    fi
 
 	    if [ $BENCH_TYPE == "writer" ]
@@ -110,10 +115,10 @@ do
                      ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
                      ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
-                   module load intel/19.1.1
+                   #module load intel/19.1.1
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-                   module unload intel/19.1.1
+                   #module unload intel/19.1.1
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
 	       fi
@@ -131,12 +136,12 @@ do
                    #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
-                   module load intel/19.1.1
+                   #module load intel/19.1.1
 	           START_TIME=$SECONDS
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-                   module unload intel/19.1.1
+                   #module unload intel/19.1.1
 
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/

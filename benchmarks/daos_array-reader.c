@@ -6,6 +6,7 @@
 #include <sys/msg.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/file.h>
 #include <unistd.h>
 
 #include "suite/daos_test.h"
@@ -215,6 +216,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   int num_snapshots;
   char list_snapnames[steps][50];
   daos_epoch_t epochs[steps];
+  int fd;
 
   oids_nr = 0;
   for (iter = 0; iter < NUM_OBJS; iter++)
@@ -223,11 +225,15 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   if (rank == 0) {
     printf("arr_size_mb = %d\n", arr_size_mb);
     while((fp = fopen("share/oid_lo.txt","r")) == NULL)
-        usleep(1000);
+        usleep(10000);
+    fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) exit(1);
     fscanf(fp,"%lu", &oid.lo);
     fclose(fp);
     while((fp = fopen("share/oid_hi.txt","r")) == NULL)
-        usleep(1000);
+        usleep(10000);
+    fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) exit(1);
     fscanf(fp,"%lu", &oid.hi);
     fclose(fp);
     printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
@@ -266,7 +272,9 @@ void read_data(size_t arr_size_mb, int steps, int async) {
       printf("Waiting to read epoch of snapshot %d\n", iter + 1);
       sprintf(buf,"share/container-snap-%d.txt",iter);
     while((fp = fopen(buf,"r")) == NULL)
-        usleep(1000);
+        usleep(10000);
+    fd = fileno(fp);
+    if(flock(fd, LOCK_EX) == -1) exit(1);
     fscanf(fp,"%lu", &epochs[iter]);
     fclose(fp);
     }
