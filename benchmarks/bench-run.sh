@@ -105,6 +105,7 @@ do
 			dfuse_pid=`pgrep dfuse`
 			echo "PID of dfuse: $dfuse_pid"
 		    fi
+                    #module load intel/19.1.1
 	    fi
 
 	    if [ $BENCH_TYPE == "writer" ]
