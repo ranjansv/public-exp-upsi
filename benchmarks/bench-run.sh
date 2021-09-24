@@ -92,7 +92,6 @@ do
 		        daos cont create --pool=$POOL_UUID 
 		        CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
                         echo "New container UUID: $CONT_UUID"
-			export  I_MPI_PMI_LIBRARY=/usr/lib64/libpmi.so
 		    elif [ $ENG_TYPE == "posix" ]
 		    then
 		        daos cont create --pool=$POOL_UUID --type=POSIX
@@ -116,6 +115,7 @@ do
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
+		   fusermount -u ./mnt/dfuse
 	       fi
 
 	    elif [ $BENCH_TYPE == "workflow" ]
@@ -139,6 +139,7 @@ do
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+		   fusermount -u ./mnt/dfuse
 	       fi
 	    fi
         done
