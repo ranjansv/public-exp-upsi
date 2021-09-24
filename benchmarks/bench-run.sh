@@ -19,11 +19,9 @@ git branch --show-current > git branch --show-current
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Build source
-#module load intel/19.1.1
 cd build
 make clean && make
 cd ..
-#module unload intel/19.1.1
 
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
@@ -84,7 +82,6 @@ do
 
 	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "posix" ]]
             then
-                    #module unload intel/19.1.1
 		    echo "Pool UUID: $POOL_UUID"
 		    echo "List of containers"
 		    daos pool list-cont --pool=$POOL_UUID
@@ -105,7 +102,6 @@ do
 			dfuse_pid=`pgrep dfuse`
 			echo "PID of dfuse: $dfuse_pid"
 		    fi
-                    #module load intel/19.1.1
 	    fi
 
 	    if [ $BENCH_TYPE == "writer" ]
@@ -116,10 +112,8 @@ do
                      ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
                      ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
-                   #module load intel/19.1.1
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-                   #module unload intel/19.1.1
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
 	       fi
@@ -137,12 +131,10 @@ do
                    #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
-                   #module load intel/19.1.1
 	           START_TIME=$SECONDS
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-                   #module unload intel/19.1.1
 
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
