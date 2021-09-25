@@ -97,9 +97,6 @@ do
 		        daos cont create --pool=$POOL_UUID --type=POSIX
 		        CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
                         echo "New container UUID: $CONT_UUID"
-			dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
-			dfuse_pid=`pgrep dfuse`
-			echo "PID of dfuse: $dfuse_pid"
 		    fi
 	    fi
 
@@ -107,10 +104,10 @@ do
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
-		   echo "Processing daos-array"
                      ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
                      ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
+		   dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
                    mv writer*.log $OUTPUT_DIR/
@@ -131,6 +128,7 @@ do
                    #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
+		   dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
 	           START_TIME=$SECONDS
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
