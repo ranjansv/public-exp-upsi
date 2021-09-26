@@ -129,6 +129,8 @@ do
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
 		   dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
+		   PID=`pgrep dfuse`
+		   echo "dfuse pid: $PID"
 	           START_TIME=$SECONDS
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
@@ -157,7 +159,8 @@ cp ./adios2.xml export-$RESULT_DIR
 mount|grep dax > export-$RESULT_DIR/fs-type.log
 
 
-#find $RESULT_DIR/ -iname 'stdout*.log'|xargs cat
+echo "List of stdout files with error"
+find $RESULT_DIR/ -iname 'stdout*.log'|xargs grep -il 'error'
 
 source ./daos-list-cont.sh
 
