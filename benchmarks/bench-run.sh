@@ -51,6 +51,7 @@ do
 	if grep -q "daos-posix" <<< "$IO_NAME"; then
 		ENG_TYPE="posix"
 		FILENAME="./mnt/dfuse/output.bp"
+		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
 	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
 	#	ENG_TYPE="daos-transport"
 	#elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
@@ -107,12 +108,12 @@ do
                      ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log 
                      ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
-		   dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
+		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                    ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
-		   fusermount -u ./mnt/dfuse
+		   fusermount -u $MOUNTPOINT
 	       fi
 
 	    elif [ $BENCH_TYPE == "workflow" ]
@@ -128,7 +129,7 @@ do
                    #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else 
-		   dfuse --mountpoint=./mnt/dfuse --pool=$POOL_UUID --container=$CONT_UUID
+		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
 		   PID=`pgrep dfuse`
 		   echo "dfuse pid: $PID"
 	           START_TIME=$SECONDS
@@ -139,7 +140,7 @@ do
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-		   fusermount -u ./mnt/dfuse
+		   fusermount -u $MOUNTPOINT
 	       fi
 	    fi
         done
