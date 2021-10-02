@@ -52,6 +52,7 @@ do
 		ENG_TYPE="posix"
 		FILENAME="./mnt/dfuse/output.bp"
 		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
+		PRELOAD_LIBPATH="/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64/libioil.so"
 	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
 	#	ENG_TYPE="daos-transport"
 	#elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
@@ -90,14 +91,12 @@ do
 		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
                     if [ $ENG_TYPE == "daos-array" ]
 		    then
-		        daos cont create --pool=$POOL_UUID 
-		        CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
+		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
                         echo "New container UUID: $CONT_UUID"
 		    elif [ $ENG_TYPE == "posix" ]
 		    then
-		        daos cont create --pool=$POOL_UUID --type=POSIX
-		        CONT_UUID=`daos cont list --pool=$POOL_UUID|tail -1|awk '{print $1}'`
-                        echo "New container UUID: $CONT_UUID"
+		        CONT_UUID=`daos cont create --pool=$POOL_UUID --type=POSIX|grep -i 'created container'|awk '{print $4}'`
+                        echo "New POSIX container UUID: $CONT_UUID"
 		    fi
 	    fi
 
@@ -133,8 +132,8 @@ do
 		   PID=`pgrep dfuse`
 		   echo "dfuse pid: $PID"
 	           START_TIME=$SECONDS
-                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    mv writer*.log $OUTPUT_DIR/
