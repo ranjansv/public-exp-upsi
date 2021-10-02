@@ -73,6 +73,8 @@ do
             mkdir -p  share/
 	    rm -rf share/*
 	    NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
+	    echo ""
+	    echo ""
             echo "Processing ${NR} writers ${NR_READERS} readers, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
