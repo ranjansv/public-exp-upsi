@@ -84,9 +84,9 @@ do
 
 	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "posix" ]]
             then
-		    echo "Pool UUID: $POOL_UUID"
-		    echo "List of containers"
-		    daos pool list-cont --pool=$POOL_UUID
+		    #echo "Pool UUID: $POOL_UUID"
+		    #echo "List of containers"
+		    #daos pool list-cont --pool=$POOL_UUID
 		    echo "Destroying all containers "
 		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
                     if [ $ENG_TYPE == "daos-array" ]
@@ -151,7 +151,7 @@ done
 echo "CSV directory:"
 echo "$RESULT_DIR/csv"
 
-cat $RESULT_DIR/csv/*.csv
+#cat $RESULT_DIR/csv/*.csv
 mkdir -p "export-${RESULT_DIR}/csv/"
 cp $RESULT_DIR/csv/*.csv export-${RESULT_DIR}/csv/
 cp ${CONFIG_FILE} export-$RESULT_DIR/config.sh
@@ -162,5 +162,5 @@ mount|grep dax > export-$RESULT_DIR/fs-type.log
 echo "List of stdout files with error"
 find $RESULT_DIR/ -iname 'stdout*.log'|xargs grep -il 'error'
 
-source ./daos-list-cont.sh
+#source ./daos-list-cont.sh
 
