@@ -30,7 +30,6 @@ cp ./adios2.xml $RESULT_DIR
 SCRIPT_NAME=`basename "$0"`
 cp ./$SCRIPT_NAME  $RESULT_DIR/
 
-rm writer-*.log reader-*.log &> /dev/null
 
 
 is_daos_agent_running=`pgrep daos_agent`
@@ -72,6 +71,7 @@ do
         do
             mkdir -p  share/
 	    rm -rf share/*
+            rm writer-*.log reader-*.log &> /dev/null
 	    NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
 	    echo ""
 	    echo ""
@@ -136,8 +136,11 @@ do
 	           START_TIME=$SECONDS
                    #env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    #env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
- ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
- ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   #ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+
+                   ibrun -n $NR -o 0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -n $NR_READERS -o $NR env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    mv writer*.log $OUTPUT_DIR/
