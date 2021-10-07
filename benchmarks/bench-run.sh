@@ -163,6 +163,7 @@ mkdir -p "export-${RESULT_DIR}/csv/"
 cp $RESULT_DIR/csv/*.csv export-${RESULT_DIR}/csv/
 cp ${CONFIG_FILE} export-$RESULT_DIR/config.sh
 cp ./adios2.xml export-$RESULT_DIR
+cp ./$SCRIPT_NAME export-$RESULT_DIR
 mount|grep dax > export-$RESULT_DIR/fs-type.log
 
 
