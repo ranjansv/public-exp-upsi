@@ -52,11 +52,6 @@ do
 		FILENAME="./mnt/dfuse/output.bp"
 		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
 		PRELOAD_LIBPATH="/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64/libioil.so"
-	#elif grep -q "daos-transport" <<< "$IO_NAME"; then
-	#	ENG_TYPE="daos-transport"
-	#elif grep -q "ext4-posix:pmem" <<< "$IO_NAME"; then
-	#	ENG_TYPE="posix"
-	#	FILENAME="/mnt/pmem0/output.bp"
 	elif grep -q "sst" <<< "$IO_NAME"; then
 		ENG_TYPE="sst"
 		FILENAME="output.bp"
@@ -84,7 +79,7 @@ do
             mkdir -p $OUTPUT_DIR
 	    #NR_READERS=$NR
 
-	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "posix" ]]
+	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "daos-posix" ]]
             then
 		    #echo "Pool UUID: $POOL_UUID"
 		    #echo "List of containers"
@@ -95,7 +90,7 @@ do
 		    then
 		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
                         echo "New container UUID: $CONT_UUID"
-		    elif [ $ENG_TYPE == "posix" ]
+		    elif [ $ENG_TYPE == "daos-posix" ]
 		    then
 		        CONT_UUID=`daos cont create --pool=$POOL_UUID --type=POSIX|grep -i 'created container'|awk '{print $4}'`
                         echo "New POSIX container UUID: $CONT_UUID"
@@ -179,7 +174,7 @@ mount|grep dax > export-$RESULT_DIR/fs-type.log
 
 
 echo "List of stdout files with error"
-find $RESULT_DIR/ -iname 'stdout*.log'|xargs grep -il 'error'
+find $RESULT_DIR/ -iname 'stdout*.log'|xargs ls -1t|tac|xargs grep -il 'error'
 
 #source ./daos-list-cont.sh
 
