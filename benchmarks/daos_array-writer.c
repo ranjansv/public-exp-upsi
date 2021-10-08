@@ -300,7 +300,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   if (rank == 0) {
     rc = daos_array_get_size(oh, DAOS_TX_NONE, &size, NULL);
     ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
-    printf("Array size = %d\n", size);
+    printf("Array size = %lu\n", size);
 
     rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames,
                              &anchor, NULL);

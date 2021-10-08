@@ -48,7 +48,6 @@ do
     do
 	#Parse IO_NAME for engine and storage type in case of DAOS
 	if grep -q "daos-posix" <<< "$IO_NAME"; then
-		ENG_TYPE="posix"
 		FILENAME="./mnt/dfuse/output.bp"
 		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
 		PRELOAD_LIBPATH="/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64/libioil.so"
