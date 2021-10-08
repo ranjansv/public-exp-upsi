@@ -1,5 +1,5 @@
 BENCH_TYPE="workflow"
-ENGINE="daos-array daos-posix sst"
+ENGINE="daos-posix"
 TOTAL_DATA_PER_RANK="512 1024 2048"
 STEPS=8
 PROCS="8 16 24"

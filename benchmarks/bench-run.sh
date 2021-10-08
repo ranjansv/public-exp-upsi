@@ -64,8 +64,7 @@ do
 
         for DATASIZE in $TOTAL_DATA_PER_RANK
         do
-            mkdir -p  share/
-	    rm -rf share/*
+	    #Delete previous writer*.log and reader*.log
             rm writer-*.log reader-*.log &> /dev/null
 	    NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
 	    echo ""
@@ -88,6 +87,9 @@ do
 		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
                     if [ $ENG_TYPE == "daos-array" ]
 		    then
+		        #Delete share directory contents with previous epoch values
+                        mkdir -p  share/
+	                rm -rf share/*
 		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
                         echo "New container UUID: $CONT_UUID"
 		    elif [ $ENG_TYPE == "daos-posix" ]

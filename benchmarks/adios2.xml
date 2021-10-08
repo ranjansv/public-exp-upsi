@@ -5,7 +5,7 @@
            Configuration for Benchmark writers
         ============================================-->
 
-    <io name="posix">
+    <io name="daos-posix">
         <engine type="BP4">
             <parameter key="Profile" value="Off"/>
             <parameter key="OpenTimeoutSecs" value="10.0"/>
