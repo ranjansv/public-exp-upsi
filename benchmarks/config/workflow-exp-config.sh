@@ -1,9 +1,8 @@
 BENCH_TYPE="workflow"
 ENGINE="sst"
-#ENGINE="daos-array daos-posix sst"
-#ENGINE="daos-posix daos-array sst"
-#TOTAL_DATA_PER_RANK="512"
-TOTAL_DATA_PER_RANK="512 1024 2048"
+ENGINE="daos-array daos-posix sst"
+TOTAL_DATA_PER_RANK="512"
+#TOTAL_DATA_PER_RANK="512 1024 2048"
 STEPS=8
 PROCS="8 16 24"
 READ_WRITE_RATIO="4"

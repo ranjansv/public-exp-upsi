@@ -129,7 +129,8 @@ do
                    #mv writer*.log $OUTPUT_DIR/
                    #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-	       else 
+	       elif [ $ENG_TYPE == "daos-posix" ]
+	       then
 		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
 		   PID=`pgrep dfuse`
 		   echo "dfuse pid: $PID"
@@ -147,6 +148,16 @@ do
                    mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 		   fusermount -u $MOUNTPOINT
+	       else
+	           START_TIME=$SECONDS
+
+                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+
+                   mv writer*.log $OUTPUT_DIR/
+                   mv reader*.log $OUTPUT_DIR/
+	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       fi
 	    fi
         done
