@@ -14,7 +14,7 @@ do
     echo "totaldataperank,$ENGINE" > $OUTPUT_FILE
     sed -i 's/\s/,/g' $OUTPUT_FILE
 
-    for DATASIZE in $TOTAL_DATA_PER_RANK
+    for DATASIZE in $DATA_PER_RANK
     do
 	DATASIZE_IN_GB=`echo "scale=1; $DATASIZE/1024" | bc`
         echo -n "$DATASIZE_IN_GB" >> $OUTPUT_FILE
@@ -39,7 +39,7 @@ do
     echo "totaldataperank,$ENGINE" > $OUTPUT_FILE
     sed -i 's/\s/,/g' $OUTPUT_FILE
 
-    for DATASIZE in $TOTAL_DATA_PER_RANK
+    for DATASIZE in $DATA_PER_RANK
     do
 	#Multiply by 4 to compute datasize per rank of the reader
 	DATASIZE_IN_GB=`echo "scale=1; $DATASIZE * $READ_WRITE_RATIO/1024" | bc`
@@ -66,9 +66,9 @@ then
         echo "global_array_size,$ENGINE" > $OUTPUT_FILE
         sed -i 's/\s/,/g' $OUTPUT_FILE
     
-        for DATASIZE in $TOTAL_DATA_PER_RANK
+        for DATASIZE in $DATA_PER_RANK
         do
-		GLOBAL_ARRAY_SIZE_GB=`echo "scale=1; ($DATASIZE/1024) * ($NR/$STEPS)" | bc`
+		GLOBAL_ARRAY_SIZE_GB=`echo "scale=1; ($DATASIZE * $NR/1024)" | bc`
             echo -n "$GLOBAL_ARRAY_SIZE_GB" >> $OUTPUT_FILE
     
             for IO_NAME in $ENGINE

@@ -62,7 +62,7 @@ do
 		FILENAME="N/A"
 	fi
 
-        for DATASIZE in $TOTAL_DATA_PER_RANK
+        for DATASIZE in $DATA_PER_RANK
         do
 	    #Delete previous writer*.log and reader*.log
             rm writer-*.log reader-*.log &> /dev/null
@@ -71,7 +71,7 @@ do
 	    echo ""
             echo "Processing ${NR} writers ${NR_READERS} readers, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
-	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR/$STEPS)" | bc`
+	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
