@@ -193,7 +193,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   daos_event_t ev, *evp;
   int rc;
   int iter;
-  int num_elements;
+  size_t num_elements;
   daos_size_t size;
 
   MesQ send_q;

@@ -1,6 +1,6 @@
 BENCH_TYPE="workflow"
-ENGINE="daos-array daos-posix sst"
-DATA_PER_RANK="64 128 256"
-STEPS=32
-PROCS="8 16 24"
+ENGINE="sst"
+DATA_PER_RANK="2048"
+STEPS=1
+PROCS="24"
 READ_WRITE_RATIO="4"

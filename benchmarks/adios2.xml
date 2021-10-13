@@ -31,8 +31,8 @@
     </io>
     <io name="sst">
         <engine type="SST">
-            <parameter key="RendezvousReaderCount" value="0"/>
-            <parameter key="SpeculativePreloadMode" value="OFF"/>
+            <parameter key="RendezvousReaderCount" value="1"/>
+            <parameter key="SpeculativePreloadMode" value="ON"/>
             <parameter key="DataTransport" value="fabric"/>
         </engine>
     </io>

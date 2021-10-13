@@ -146,6 +146,7 @@ do
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 		   fusermount -u $MOUNTPOINT
 	       else
+	           rm ./output.bp.sst
 	           START_TIME=$SECONDS
 
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
