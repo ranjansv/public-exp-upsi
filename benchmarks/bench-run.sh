@@ -1,5 +1,13 @@
 #!/bin/bash
-#Benchmark script
+#SBATCH -J upsi-bench           # Job name
+#SBATCH -o upsi-bench.o%j       # Name of stdout output file
+#SBATCH -e upsi-bench.e%j       # Name of stderr error file
+#SBATCH -p small                # Queue (partition) name
+#SBATCH -N 2               # Total # of nodes 
+#SBATCH -n 48              # Total # of mpi tasks
+#SBATCH -t 00:05:00        # Run time (hh:mm:ss)
+#SBATCH --mail-type=all    # Send email at begin and end of job
+#SBATCH --mail-user=ranjansv@gmail.com
 
 CONFIG_FILE=$1
 
@@ -27,7 +35,7 @@ cd ..
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 cp ./adios2.xml $RESULT_DIR
 
-SCRIPT_NAME=`basename "$0"`
+SCRIPT_NAME="bench-run.sh"
 cp ./$SCRIPT_NAME  $RESULT_DIR/
 
 
