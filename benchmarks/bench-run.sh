@@ -23,7 +23,7 @@ rm results/latest
 ln -s $TIMESTAMP results/latest
 
 #mount > $RESULT_DIR/fs-mounts.log
-git branch --show-current > git branch --show-current
+git branch --show-current > $RESULT_DIR/git.log 
 git log --format="%H" -n 1 >> $RESULT_DIR/git.log
 
 #Build source
