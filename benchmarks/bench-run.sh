@@ -5,9 +5,11 @@
 #SBATCH -p flex                 # Queue (partition) name
 #SBATCH -N 2               # Total # of nodes 
 #SBATCH -n 48              # Total # of mpi tasks
-#SBATCH -t 00:05:00        # Run time (hh:mm:ss)
+#SBATCH -t 00:15:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
+
+echo "POOL_UUID: $POOL_UUID"
 
 CONFIG_FILE=$1
 
@@ -128,7 +130,7 @@ do
 	       then
 	           START_TIME=$SECONDS
                    ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o $NR build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR_READERS -o 24 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    #mv writer*.log $OUTPUT_DIR/
@@ -146,7 +148,7 @@ do
                    #ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 
                    ibrun -n $NR -o 0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o $NR env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR_READERS -o 24 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    mv writer*.log $OUTPUT_DIR/
@@ -170,6 +172,7 @@ do
     done
 done
 
+./daos-destoy-cont.sh
 ./parse-result.sh $RESULT_DIR
 
 echo "CSV directory:"
