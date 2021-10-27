@@ -131,7 +131,8 @@ do
 	       then
 	           START_TIME=$SECONDS
                    ibrun -n $NR -o 0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o 28 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR_READERS -o 28 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    #mv writer*.log $OUTPUT_DIR/
@@ -150,7 +151,8 @@ do
                    #ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 
                    ibrun -n $NR -o 0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o 28 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR_READERS -o 28 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    mv writer*.log $OUTPUT_DIR/
@@ -163,7 +165,8 @@ do
 	           START_TIME=$SECONDS
 
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o 28 build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR_READERS -o 28 build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    mv writer*.log $OUTPUT_DIR/
