@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
       MPI_Barrier(comm);
       timer_write.start();
 #endif
-      writer.write(steps,u);
+      writer.write(i,u);
 
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();
