@@ -164,12 +164,14 @@ do
 		   unset TACC_TASKS_PER_NODE
 	       else
 	           rm ./output.bp.sst
+		   export SstVerbose=2
 	           START_TIME=$SECONDS
 
                    ibrun -n $NR -o 0  numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -n $NR_READERS -o 56  numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+		   unset SstVerbose
 
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
