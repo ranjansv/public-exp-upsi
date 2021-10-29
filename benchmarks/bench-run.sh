@@ -54,6 +54,7 @@ else
    echo "daos_agent is already running"
 fi
 
+RANKS_PER_NODE=28
 
 for NR in $PROCS
 do
@@ -114,8 +115,9 @@ do
 
 	    export I_MPI_PIN=0
 
-	    writer_nodes=5
-	    reader_nodes=2
+	    writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
+	    reader_nodes=$((($NR_READERS + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
+
 
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
