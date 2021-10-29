@@ -3,7 +3,7 @@
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
 #SBATCH -p flex                 # Queue (partition) name
-#SBATCH -N 6                # Total # of nodes 
+#SBATCH -N 7                # Total # of nodes 
 #SBATCH -n 168              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
 #SBATCH -t 00:30:00        # Run time (hh:mm:ss)
@@ -114,6 +114,9 @@ do
 
 	    export I_MPI_PIN=0
 
+	    writer_nodes=5
+	    reader_nodes=2
+
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
@@ -168,8 +171,16 @@ do
 		   export SstVerbose=2
 	           START_TIME=$SECONDS
 
-                   ibrun -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   for i in `seq $writer_nodes`; do
+                     offset=$(( (i-1)*28 ))
+		     echo "ibrun -o $offset -n 28  sst-writer &"
+                     ibrun -o $offset -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+		   done
+		   for i in `seq $((writer_nodes + 1)) $((reader_nodes + writer_nodes))`; do
+		     offset=$(( (i-1)*28 ))
+		     echo "ibrun -o $offset -n 28  sst-reader & "
+                     ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+		   done
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset SstVerbose
