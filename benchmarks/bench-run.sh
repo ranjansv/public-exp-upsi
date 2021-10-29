@@ -4,7 +4,8 @@
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
 #SBATCH -p flex                 # Queue (partition) name
 #SBATCH -N 6                # Total # of nodes 
-#SBATCH -n 336              # Total # of mpi tasks
+#SBATCH -n 168              # Total # of mpi tasks
+#SBATCH --ntasks-per-node=28
 #SBATCH -t 00:30:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
