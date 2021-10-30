@@ -93,11 +93,9 @@ static inline void ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
     // ASSERT(rc == 0, "event init failed with %d", rc);
 
     /** initialize scatter/gather */
-    req->iov = (d_iov_t){
-        .iov_buf = data,
-        .iov_buf_len = data_per_rank * sizeof(data[0]),
-        .iov_len = data_per_rank * sizeof(data[0]),
-    };
+    req->iov = (d_iov_t) { .iov_buf = data,
+                           .iov_buf_len = data_per_rank * sizeof(data[0]),
+                           .iov_len = data_per_rank * sizeof(data[0]), };
     req->sg.sg_nr = 1;
     req->sg.sg_iovs = &req->iov;
   }
@@ -137,7 +135,7 @@ void array(size_t arr_size_mb, int steps) {
 }
 
 static void array_oh_share(daos_handle_t *oh) {
-  d_iov_t ghdl = {NULL, 0, 0};
+  d_iov_t ghdl = { NULL, 0, 0 };
   int rc;
 
   if (rank == 0) {
@@ -216,16 +214,18 @@ void write_data(size_t arr_size_mb, int steps, int async) {
                            NULL);
     assert_rc_equal(rc, 0);
 
-    fp = fopen("./share/oid_lo.txt","w");
+    fp = fopen("./share/oid_lo.txt", "w");
     fd = fileno(fp);
-    if(flock(fd, LOCK_EX) == -1) exit(1);
-    fprintf(fp,"%lu",oid.lo);
+    if (flock(fd, LOCK_EX) == -1)
+      exit(1);
+    fprintf(fp, "%lu", oid.lo);
     fclose(fp);
 
-    fp = fopen("./share/oid_hi.txt","w");
+    fp = fopen("./share/oid_hi.txt", "w");
     fd = fileno(fp);
-    if(flock(fd, LOCK_EX) == -1) exit(1);
-    fprintf(fp,"%lu",oid.hi);
+    if (flock(fd, LOCK_EX) == -1)
+      exit(1);
+    fprintf(fp, "%lu", oid.hi);
     fclose(fp);
   }
   array_oh_share(&oh);
@@ -287,12 +287,13 @@ void write_data(size_t arr_size_mb, int steps, int async) {
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
-      sprintf(buf,"./share/container-snap-%d.txt",iter);
+      sprintf(buf, "./share/container-snap-%d.txt", iter);
 
-      fp = fopen(buf,"w");
-    fd = fileno(fp);
-    if(flock(fd, LOCK_EX) == -1) exit(1);
-      fprintf(fp,"%lu", epoch);
+      fp = fopen(buf, "w");
+      fd = fileno(fp);
+      if (flock(fd, LOCK_EX) == -1)
+        exit(1);
+      fprintf(fp, "%lu", epoch);
       fclose(fp);
     }
   }

@@ -94,11 +94,9 @@ static inline void ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
     // ASSERT(rc == 0, "event init failed with %d", rc);
 
     /** initialize scatter/gather */
-    req->iov = (d_iov_t){
-        .iov_buf = data,
-        .iov_buf_len = data_per_rank * sizeof(data[0]),
-        .iov_len = data_per_rank * sizeof(data[0]),
-    };
+    req->iov = (d_iov_t) { .iov_buf = data,
+                           .iov_buf_len = data_per_rank * sizeof(data[0]),
+                           .iov_len = data_per_rank * sizeof(data[0]), };
     req->sg.sg_nr = 1;
     req->sg.sg_iovs = &req->iov;
   }
@@ -138,7 +136,7 @@ void array(size_t arr_size_mb, int steps) {
 }
 
 static void array_oh_share(daos_handle_t *oh) {
-  d_iov_t ghdl = {NULL, 0, 0};
+  d_iov_t ghdl = { NULL, 0, 0 };
   int rc;
 
   if (rank == 0) {
@@ -224,17 +222,19 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
   if (rank == 0) {
     printf("arr_size_mb = %d\n", arr_size_mb);
-    while((fp = fopen("share/oid_lo.txt","r")) == NULL)
-        usleep(10000);
+    while ((fp = fopen("share/oid_lo.txt", "r")) == NULL)
+      usleep(10000);
     fd = fileno(fp);
-    if(flock(fd, LOCK_EX) == -1) exit(1);
-    fscanf(fp,"%lu", &oid.lo);
+    if (flock(fd, LOCK_EX) == -1)
+      exit(1);
+    fscanf(fp, "%lu", &oid.lo);
     fclose(fp);
-    while((fp = fopen("share/oid_hi.txt","r")) == NULL)
-        usleep(10000);
+    while ((fp = fopen("share/oid_hi.txt", "r")) == NULL)
+      usleep(10000);
     fd = fileno(fp);
-    if(flock(fd, LOCK_EX) == -1) exit(1);
-    fscanf(fp,"%lu", &oid.hi);
+    if (flock(fd, LOCK_EX) == -1)
+      exit(1);
+    fscanf(fp, "%lu", &oid.hi);
     fclose(fp);
     printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
     // msgctl(msgid, IPC_RMID, NULL);
@@ -270,13 +270,14 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
     if (rank == 0) {
       printf("Waiting to read epoch of snapshot %d\n", iter + 1);
-      sprintf(buf,"share/container-snap-%d.txt",iter);
-    while((fp = fopen(buf,"r")) == NULL)
+      sprintf(buf, "share/container-snap-%d.txt", iter);
+      while ((fp = fopen(buf, "r")) == NULL)
         usleep(10000);
-    fd = fileno(fp);
-    if(flock(fd, LOCK_EX) == -1) exit(1);
-    fscanf(fp,"%lu", &epochs[iter]);
-    fclose(fp);
+      fd = fileno(fp);
+      if (flock(fd, LOCK_EX) == -1)
+        exit(1);
+      fscanf(fp, "%lu", &epochs[iter]);
+      fclose(fp);
     }
     // MPI share epoch
     rc = MPI_Bcast(&epochs[iter], 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
