@@ -6,11 +6,12 @@
 #SBATCH -N 7                # Total # of nodes 
 #SBATCH -n 196              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 00:30:00        # Run time (hh:mm:ss)
+#SBATCH -t 00:45:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
 echo "POOL_UUID: $POOL_UUID"
+echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
 
 CONFIG_FILE=$1
 
@@ -48,7 +49,7 @@ echo $is_daos_agent_running
 if [[ $is_daos_agent_running -eq "" ]]
 then
 export TACC_TASKS_PER_NODE=1
-ibrun -np 6  ~/bin/daos_startup.sh
+ibrun -np $SLURM_JOB_NUM_NODES  ~/bin/daos_startup.sh
 unset TACC_TASKS_PER_NODE
 else
    echo "daos_agent is already running"
@@ -117,6 +118,9 @@ do
 
 	    writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
 	    #reader_nodes=$((($NR_READERS + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
+	    i=$((writer_nodes + 1))
+	    offset=$(( (i-1)*28 ))
+            echo "First Reader Node: $i, offset: $offset" 
 
 
 	    if [ $BENCH_TYPE == "writer" ]
@@ -138,8 +142,8 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   ibrun -n $NR numactl --cpunodebind=0 --preferred=0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS numactl --cpunodebind=0 --preferred=0 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -149,7 +153,7 @@ do
 	       elif [ $ENG_TYPE == "daos-posix" ]
 	       then
 		   export TACC_TASKS_PER_NODE=1
-		   ibrun -np 6  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
+		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
 		   unset TACC_TASKS_PER_NODE
 	           START_TIME=$SECONDS
                    #env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
@@ -157,8 +161,8 @@ do
                    #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    #ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 
-                   ibrun -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -166,14 +170,11 @@ do
                    mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 		   export TACC_TASKS_PER_NODE=1
-		   ibrun -np 6 fusermount -u $MOUNTPOINT
+		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
 		   unset TACC_TASKS_PER_NODE
 	       else
 	           rm ./output.bp.sst
 		   export SstVerbose=2
-		   i=$((writer_nodes + 1))
-		   offset=$(( (i-1)*28 ))
-                   echo "First Reader Node: $i, offset: $offset" 
 	           START_TIME=$SECONDS
                    ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
