@@ -4,7 +4,7 @@
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
 #SBATCH -p flex                 # Queue (partition) name
 #SBATCH -N 7                # Total # of nodes 
-#SBATCH -n 168              # Total # of mpi tasks
+#SBATCH -n 196              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
 #SBATCH -t 00:30:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
@@ -116,7 +116,7 @@ do
 	    export I_MPI_PIN=0
 
 	    writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
-	    reader_nodes=$((($NR_READERS + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
+	    #reader_nodes=$((($NR_READERS + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
 
 
 	    if [ $BENCH_TYPE == "writer" ]
@@ -171,18 +171,12 @@ do
 	       else
 	           rm ./output.bp.sst
 		   export SstVerbose=2
+		   i=$((writer_nodes + 1))
+		   offset=$(( (i-1)*28 ))
+                   echo "First Reader Node: $i, offset: $offset" 
 	           START_TIME=$SECONDS
-
-                   for i in `seq $writer_nodes`; do
-                     offset=$(( (i-1)*28 ))
-		     echo "ibrun -o $offset -n 28  sst-writer &"
-                     ibrun -o $offset -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-		   done
-		   for i in `seq $((writer_nodes + 1)) $((reader_nodes + writer_nodes))`; do
-		     offset=$(( (i-1)*28 ))
-		     echo "ibrun -o $offset -n 28  sst-reader & "
-                     ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
-		   done
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset SstVerbose
