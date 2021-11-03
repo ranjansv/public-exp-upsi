@@ -227,6 +227,8 @@ void write_data(size_t arr_size_mb, int steps, int async) {
       exit(1);
     fprintf(fp, "%lu", oid.hi);
     fclose(fp);
+
+    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi); 
   }
   array_oh_share(&oh);
 
