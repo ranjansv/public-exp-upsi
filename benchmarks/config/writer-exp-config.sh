@@ -1,6 +1,6 @@
 BENCH_TYPE="writer"
-ENGINE="daos-array sst"
-DATA_PER_RANK="64 128 256"
+ENGINE="daos-array"
+DATA_PER_RANK="64"
 STEPS=8
-PROCS="8"
+PROCS="128"
 READ_WRITE_RATIO="4"

@@ -309,8 +309,6 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
     MPI_Barrier(MPI_COMM_WORLD);
   }
-  if (rank == 0)
-    msgctl(msgid, IPC_RMID, NULL);
 
   D_FREE(rbuf);
   D_FREE(wbuf);

@@ -1,5 +1,5 @@
 BENCH_TYPE="workflow"
-ENGINE="sst"
+ENGINE="daos-array"
 DATA_PER_RANK="64"
 STEPS=8
 PROCS="128"
