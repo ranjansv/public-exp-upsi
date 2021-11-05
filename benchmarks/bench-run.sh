@@ -105,6 +105,7 @@ do
 		        #Delete share directory contents with previous epoch values
                         mkdir -p  share/
 	                rm -rf share/*
+			echo "0" > share/snapshot_count.txt
 		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
                         echo "New container UUID: $CONT_UUID"
 		    elif [ $ENG_TYPE == "daos-posix" ]

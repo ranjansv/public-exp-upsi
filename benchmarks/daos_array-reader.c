@@ -216,6 +216,8 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   daos_epoch_t epochs[steps];
   int fd;
 
+  int num_committed_snapshots = 0;
+
   oids_nr = 0;
   for (iter = 0; iter < NUM_OBJS; iter++)
     memset(&oids[iter], 0, sizeof(daos_obj_id_t));
@@ -270,12 +272,19 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
     if (rank == 0) {
       printf("Waiting to read epoch of snapshot %d\n", iter + 1);
-      sprintf(buf, "share/container-snap-%d.txt", iter);
-      while ((fp = fopen(buf, "r")) == NULL)
+
+      while (iter + 1 > num_committed_snapshots) {
         usleep(10000);
-      fd = fileno(fp);
-      if (flock(fd, LOCK_EX) == -1)
-        exit(1);
+        fp = fopen("./share/snapshot_count.txt", "r");
+        fd = fileno(fp);
+        if (flock(fd, LOCK_EX) == -1)
+          exit(1);
+        fscanf(fp, "%lu", &num_committed_snapshots);
+        fclose(fp);
+      }
+
+      sprintf(buf, "share/container-snap-%d.txt", iter);
+      fp = fopen(buf, "r");
       fscanf(fp, "%lu", &epochs[iter]);
       fclose(fp);
     }

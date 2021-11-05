@@ -289,13 +289,18 @@ void write_data(size_t arr_size_mb, int steps, int async) {
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
-      sprintf(buf, "./share/container-snap-%d.txt", iter);
 
+
+      sprintf(buf, "./share/container-snap-%d.txt", iter);
       fp = fopen(buf, "w");
+      fprintf(fp, "%lu", epoch);
+      fclose(fp);
+
+      fp = fopen("./share/snapshot_count.txt","w");
       fd = fileno(fp);
       if (flock(fd, LOCK_EX) == -1)
         exit(1);
-      fprintf(fp, "%lu", epoch);
+      fprintf(fp, "%d", iter + 1);
       fclose(fp);
     }
   }
