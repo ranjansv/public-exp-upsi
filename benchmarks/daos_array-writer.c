@@ -215,17 +215,18 @@ void write_data(size_t arr_size_mb, int steps, int async) {
     assert_rc_equal(rc, 0);
 
     fp = fopen("./share/oid_lo.txt", "w");
-    fd = fileno(fp);
-    if (flock(fd, LOCK_EX) == -1)
-      exit(1);
     fprintf(fp, "%lu", oid.lo);
     fclose(fp);
 
     fp = fopen("./share/oid_hi.txt", "w");
+    fprintf(fp, "%lu", oid.hi);
+    fclose(fp);
+
+    fp = fopen("./share/oid_part_count.txt", "w");
     fd = fileno(fp);
     if (flock(fd, LOCK_EX) == -1)
       exit(1);
-    fprintf(fp, "%lu", oid.hi);
+    fprintf(fp, "%d", 2);
     fclose(fp);
 
     printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi); 

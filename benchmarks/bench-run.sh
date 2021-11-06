@@ -3,8 +3,8 @@
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
 #SBATCH -p flex			# Queue (partition) name
-#SBATCH -N 7                # Total # of nodes 
-#SBATCH -n 196              # Total # of mpi tasks
+#SBATCH -N 2                # Total # of nodes 
+#SBATCH -n 56              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
 #SBATCH -t 00:45:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
@@ -106,6 +106,7 @@ do
                         mkdir -p  share/
 	                rm -rf share/*
 			echo "0" > share/snapshot_count.txt
+			echo "0" > share/oid_part_count.txt
 		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
                         echo "New container UUID: $CONT_UUID"
 		    elif [ $ENG_TYPE == "daos-posix" ]

@@ -217,6 +217,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   int fd;
 
   int num_committed_snapshots = 0;
+  int oid_part_count = 0;
 
   oids_nr = 0;
   for (iter = 0; iter < NUM_OBJS; iter++)
@@ -224,21 +225,24 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
   if (rank == 0) {
     printf("arr_size_mb = %d\n", arr_size_mb);
-    while ((fp = fopen("share/oid_lo.txt", "r")) == NULL)
+
+    while(oid_part_count != 2) {
       usleep(10000);
-    fd = fileno(fp);
-    if (flock(fd, LOCK_EX) == -1)
-      exit(1);
+      fp = fopen("./share/oid_part_count.txt", "r");
+      fd = fileno(fp);
+      if (flock(fd, LOCK_EX) == -1)
+        exit(1);
+      fscanf(fp, "%d", &oid_part_count);
+      fclose(fp);
+    }
+    fp = fopen("share/oid_lo.txt", "r");
     fscanf(fp, "%lu", &oid.lo);
     fclose(fp);
-    while ((fp = fopen("share/oid_hi.txt", "r")) == NULL)
-      usleep(10000);
-    fd = fileno(fp);
-    if (flock(fd, LOCK_EX) == -1)
-      exit(1);
+
+    fp = fopen("share/oid_hi.txt", "r");
     fscanf(fp, "%lu", &oid.hi);
     fclose(fp);
-    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
+    printf("rank = 0, oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
     // msgctl(msgid, IPC_RMID, NULL);
   }
   rc = MPI_Bcast(&oid.lo, 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
