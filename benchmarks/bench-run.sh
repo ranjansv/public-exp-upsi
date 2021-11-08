@@ -124,7 +124,7 @@ do
 	    offset=$(( (i-1)*28 ))
             echo "First Reader Node: $i, offset: $offset" 
 
-
+            #Readers execute after writers
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
@@ -139,6 +139,7 @@ do
                    mv reader*.log $OUTPUT_DIR/
 		   fusermount -u $MOUNTPOINT
 	       fi
+	    #Readers and Writers execute concurrently
 	    elif [ $BENCH_TYPE == "workflow" ]
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
