@@ -173,6 +173,10 @@ do
                    ibrun -o $offset -n $NR_READERS  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
+		   export TACC_TASKS_PER_NODE=1
+		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
+		   unset TACC_TASKS_PER_NODE
+
 
                    #If the readers are done, writers ought be done. However, we place a catch all wait here just in case. So that we dont have stale writers from the
 		   #previous
@@ -182,9 +186,6 @@ do
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-		   export TACC_TASKS_PER_NODE=1
-		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
-		   unset TACC_TASKS_PER_NODE
 	       else
 	           rm ./output.bp.sst
 		   export SstVerbose=2
