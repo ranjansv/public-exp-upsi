@@ -155,8 +155,14 @@ do
 	       elif [ $ENG_TYPE == "daos-posix" ]
 	       then
 		   export TACC_TASKS_PER_NODE=1
-		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
+		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID &
 		   unset TACC_TASKS_PER_NODE
+
+		   #ibrun waits for dfuse deamon which not return and hangs up without the &. Hence, we run ibrun in background and put a sleep so that dfuse mount
+		   #is complete on all nodes
+
+		   sleep 60
+
 	           START_TIME=$SECONDS
                    #env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    #env LD_PRELOAD=$PRELOAD_LIBPATH ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
@@ -164,9 +170,14 @@ do
                    #ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 
                    ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
-		   wait
+                   ibrun -o $offset -n $NR_READERS  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+
+
+                   #If the readers are done, writers ought be done. However, we place a catch all wait here just in case. So that we dont have stale writers from the
+		   #previous
+		   wait
+
 
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
