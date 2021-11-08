@@ -6,7 +6,7 @@
 #SBATCH -N 7                # Total # of nodes 
 #SBATCH -n 196              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 04:30:00        # Run time (hh:mm:ss)
+#SBATCH -t 01:30:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
