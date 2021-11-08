@@ -15,7 +15,7 @@ echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
 
 CONFIG_FILE=$1
 
-#Load config
+#Load config file
 source ${CONFIG_FILE}
 
 #Create timestamped output directory
@@ -95,9 +95,6 @@ do
 
 	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "daos-posix" ]]
             then
-		    #echo "Pool UUID: $POOL_UUID"
-		    #echo "List of containers"
-		    #daos pool list-cont --pool=$POOL_UUID
 		    echo "Destroying all containers "
 		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
                     if [ $ENG_TYPE == "daos-array" ]
