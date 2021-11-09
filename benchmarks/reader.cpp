@@ -68,7 +68,7 @@ int main(int argc, char *argv[]) {
 #endif
     // Begin step
     adios2::StepStatus read_status =
-        reader.BeginStep(adios2::StepMode::Read, 10.0f);
+        reader.BeginStep(adios2::StepMode::Read);
     if (read_status == adios2::StepStatus::NotReady) {
       // std::cout << "Stream not ready yet. Waiting...\n";
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
