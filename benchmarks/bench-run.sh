@@ -2,11 +2,11 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex			# Queue (partition) name
-#SBATCH -N 7                # Total # of nodes 
-#SBATCH -n 196              # Total # of mpi tasks
+#SBATCH -p flex                 # Queue (partition) name
+#SBATCH -N 10                # Total # of nodes 
+#SBATCH -n 280              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 02:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 06:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
