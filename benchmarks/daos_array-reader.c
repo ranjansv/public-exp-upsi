@@ -293,7 +293,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
     // MPI share epoch
     rc = MPI_Bcast(&epochs[iter], 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
     assert_int_equal(rc, MPI_SUCCESS);
-    printf("iter %d rank %d epoch: %lu\n", iter, rank, epochs[iter]);
+    printf("iter %d rank %d epoch: %lu\n", iter + 1, rank, epochs[iter]);
 
     rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
     ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
