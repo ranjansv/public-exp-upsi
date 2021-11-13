@@ -188,7 +188,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   daos_range_t rg;
   d_sg_list_t sgl;
   d_iov_t iov;
-  char *wbuf = NULL, *rbuf = NULL;
+  char *rbuf = NULL;
   daos_size_t i;
   daos_event_t ev, *evp;
   int rc;
@@ -255,8 +255,6 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   }
 
   num_elements = arr_size_mb * MB_in_bytes / procs;
-  D_ALLOC_ARRAY(wbuf, num_elements);
-  assert_non_null(wbuf);
   D_ALLOC_ARRAY(rbuf, num_elements);
   assert_non_null(rbuf);
 
@@ -268,7 +266,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
   /** set memory location */
   sgl.sg_nr = 1;
-  d_iov_set(&iov, wbuf, num_elements * sizeof(char));
+  d_iov_set(&iov, rbuf, num_elements * sizeof(char));
   sgl.sg_iovs = &iov;
 
   for (iter = 0; iter < steps; iter++) {
@@ -324,7 +322,6 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   }
 
   D_FREE(rbuf);
-  D_FREE(wbuf);
 }
 
 int main(int argc, char **argv) {

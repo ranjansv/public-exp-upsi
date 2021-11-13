@@ -186,7 +186,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   daos_range_t rg;
   d_sg_list_t sgl;
   d_iov_t iov;
-  char *wbuf = NULL, *rbuf = NULL;
+  char *wbuf = NULL;
   daos_size_t i;
   daos_event_t ev, *evp;
   int rc;
@@ -240,8 +240,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   num_elements = arr_size_mb * MB_in_bytes / procs;
   D_ALLOC_ARRAY(wbuf, num_elements);
   assert_non_null(wbuf);
-  D_ALLOC_ARRAY(rbuf, num_elements);
-  assert_non_null(rbuf);
+
   for (i = 0; i < num_elements; i++)
     wbuf[i] = i + 1;
 
@@ -317,7 +316,6 @@ void write_data(size_t arr_size_mb, int steps, int async) {
 
     printf("Number of snapshots: %d\n", num_snapshots);
   }
-  D_FREE(rbuf);
   D_FREE(wbuf);
 }
 
