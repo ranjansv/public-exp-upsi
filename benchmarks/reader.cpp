@@ -107,6 +107,7 @@ int main(int argc, char *argv[]) {
 
     log << step << "\t" << time_step << "\t" << time_read << "\t" << std::endl;
     //<< time_compute << "\t" << time_write << std::endl;
+    printf("reader rank - %d, iter - %d\n", rank, step);
 #endif
   }
 #ifdef ENABLE_TIMERS
