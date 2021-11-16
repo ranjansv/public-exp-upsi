@@ -2,11 +2,11 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p normal               # Queue (partition) name
-#SBATCH -N 47                # Total # of nodes 
-#SBATCH -n 1316              # Total # of mpi tasks
+#SBATCH -p flex 		# Queue (partition) name
+#SBATCH -N 2                # Total # of nodes 
+#SBATCH -n 56              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 06:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 00:20:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -184,7 +184,7 @@ do
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else
 	           rm ./output.bp.sst
-		   export SstVerbose=2
+		   export SstVerbose=5
 	           START_TIME=$SECONDS
                    ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
