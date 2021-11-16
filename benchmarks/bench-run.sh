@@ -2,7 +2,7 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex                 # Queue (partition) name
+#SBATCH -p normal               # Queue (partition) name
 #SBATCH -N 47                # Total # of nodes 
 #SBATCH -n 1316              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
