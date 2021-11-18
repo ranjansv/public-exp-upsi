@@ -48,7 +48,8 @@ int main(int argc, char *argv[]) {
 
 #ifdef ENABLE_TIMERS
   Timer timer_total;
-  Timer timer_read;
+  Timer timer_read_metadata;
+  Timer timer_read_data;
   Timer timer_compute;
   Timer timer_write;
 
@@ -56,7 +57,7 @@ int main(int argc, char *argv[]) {
   log_fname << "reader-" << rank << ".log";
 
   std::ofstream log(log_fname.str());
-  log << "step\ttotal\tread" << std::endl;
+  log << "step\ttotal\tread_metadata\tread_data" << std::endl;
   //log << "step\ttotal\tread\tcompute\twrite" << std::endl;
 #endif
 
@@ -64,11 +65,15 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_TIMERS
     MPI_Barrier(comm);
     timer_total.start();
-    timer_read.start();
+    timer_read_metadata.start();
 #endif
     // Begin step
     adios2::StepStatus read_status =
         reader.BeginStep(adios2::StepMode::Read);
+#ifdef ENABLE_TIMERS
+    double time_read_metadata = timer_read_metadata.stop();
+    timer_read_data.start();
+#endif
     if (read_status == adios2::StepStatus::NotReady) {
       // std::cout << "Stream not ready yet. Waiting...\n";
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -101,17 +106,17 @@ int main(int argc, char *argv[]) {
 
     reader.EndStep();
 #ifdef ENABLE_TIMERS
-    double time_read = timer_read.stop();
+    double time_read_data = timer_read_data.stop();
     double time_step = timer_total.stop();
     MPI_Barrier(comm);
 
-    log << step << "\t" << time_step << "\t" << time_read << "\t" << std::endl;
+    log << step << "\t" << time_step << "\t" << time_read_metadata << "\t" << time_read_data << "\t" << std::endl;
     //<< time_compute << "\t" << time_write << std::endl;
-    printf("reader rank - %d, iter - %d\n", rank, step);
 #endif
   }
 #ifdef ENABLE_TIMERS
-    log << "total\t" << timer_total.elapsed() << "\t" << timer_read.elapsed()
+    log << "total\t" << timer_total.elapsed() << "\t" << timer_read_metadata.elapsed() << "\t"
+        << timer_read_data.elapsed()
         << std::endl;
 
     log.close();
