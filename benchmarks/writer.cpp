@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
     for (int i = 0; i < steps; i++) {
 #ifdef ENABLE_TIMERS
-      MPI_Barrier(comm);
+      //MPI_Barrier(comm);
       timer_total.start();
       timer_compute.start();
 #endif
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
 
 #ifdef ENABLE_TIMERS
       double time_compute = timer_compute.stop();
-      MPI_Barrier(comm);
+      //MPI_Barrier(comm);
       timer_write.start();
 #endif
       writer.write(i + 1,u);
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_TIMERS
       double time_write = timer_write.stop();
       double time_step = timer_total.stop();
-      MPI_Barrier(comm);
+      //MPI_Barrier(comm);
 
       log << i << "\t" << time_step << "\t" << time_compute << "\t" << time_write << std::endl;
       printf("writer rank - %d, iter - %d\n", rank, i + 1);

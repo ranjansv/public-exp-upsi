@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
   while (true) {
 #ifdef ENABLE_TIMERS
-    MPI_Barrier(comm);
+    //MPI_Barrier(comm);
     timer_total.start();
     timer_read_metadata.start();
 #endif
@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
 #ifdef ENABLE_TIMERS
     double time_read_data = timer_read_data.stop();
     double time_step = timer_total.stop();
-    MPI_Barrier(comm);
+    //MPI_Barrier(comm);
 
     log << step << "\t" << time_step << "\t" << time_read_metadata << "\t" << time_read_data << "\t" << std::endl;
     //<< time_compute << "\t" << time_write << std::endl;
