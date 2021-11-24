@@ -24,19 +24,21 @@ include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/p
 include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/prereq/dev/protobufc/include)
 include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/src/tests)
 include_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/src/include)
+include_directories(/work2/08059/ranjansv/frontera/caliper/install/include)
 link_directories(/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64)
+link_directories(/work2/08059/ranjansv/frontera/caliper/install/lib64)
 
 add_executable(writer writer.cpp)
-target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C )
+target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C caliper)
 
 add_executable(reader reader.cpp)
-target_link_libraries(reader PRIVATE adios2::cxx11_mpi MPI::MPI_C)
+target_link_libraries(reader PRIVATE adios2::cxx11_mpi MPI::MPI_C caliper)
 
 add_executable(daos_array-writer daos_array-writer.c)
-target_link_libraries(daos_array-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
+target_link_libraries(daos_array-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
 add_executable(daos_array-reader daos_array-reader.c)
-target_link_libraries(daos_array-reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C)
+target_link_libraries(daos_array-reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
 
 #add_executable(simple_array simple_array.c)
