@@ -14,6 +14,9 @@
 #include <daos/tests_lib.h>
 #include <mpi.h>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+
 /** local task information */
 int rank = -1;
 int wrank;
@@ -206,8 +209,10 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   static daos_size_t chunk_size = 2097152;
   // static daos_size_t chunk_size = 16;
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  //MPI_Barrier(MPI_COMM_WORLD);
   /** create the array on rank 0 and share the oh. */
+ 
+  CALI_MARK_BEGIN("daos_array-writer:oid-gen-n-share"); 
   if (rank == 0) {
     oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0, 0);
     rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size, chunk_size, &oh,
@@ -232,6 +237,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
     printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi); 
   }
   array_oh_share(&oh);
+  CALI_MARK_END("daos_array-writer:oid-gen-n-share"); 
 
   /** Allocate and set buffer */
   // num_elements = arr_size_mb ;
@@ -264,8 +270,9 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   daos_anchor_t anchor;
   memset(&anchor, 0, sizeof(anchor));
 
+  CALI_MARK_BEGIN("daos_array-writer:iterations");
+
   for (iter = 0; iter < steps; iter++) {
-    MPI_Barrier(MPI_COMM_WORLD);
     /** Write */
     // if (async) {
     //  rc = daos_event_init(&ev, eq, NULL);
@@ -274,18 +281,22 @@ void write_data(size_t arr_size_mb, int steps, int async) {
     // rc = daos_tx_open(coh, &th, 0, NULL);
     // assert_rc_equal(rc, 0);
     // rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
+    CALI_MARK_BEGIN("daos_array-writer:write-time");
     rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
+    CALI_MARK_END("daos_array-writer:write-time");
     // rc = daos_tx_commit(th, NULL);
     // assert_rc_equal(rc, 0);
     // rc = daos_tx_close(th, NULL);
     // assert_rc_equal(rc, 0);
 
     MPI_Barrier(MPI_COMM_WORLD);
+    CALI_MARK_BEGIN("daos_array-writer:snapshot-time");
     if (rank == 0) {
       // sprintf(snapshot_name, "snapshot-", iter + 1);
       // rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
       rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
+
       printf("daos_cont_create_snap, rc = %d\n", rc);
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
@@ -303,7 +314,10 @@ void write_data(size_t arr_size_mb, int steps, int async) {
       fprintf(fp, "%d", iter + 1);
       fclose(fp);
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    CALI_MARK_END("daos_array-writer:snapshot-time");
   }
+  CALI_MARK_END("daos_array-writer:iterations");
 
   if (rank == 0) {
     rc = daos_array_get_size(oh, DAOS_TX_NONE, &size, NULL);
@@ -329,6 +343,8 @@ int main(int argc, char **argv) {
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
 
+  cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
+
   rc = MPI_Init(&argc, &argv);
   ASSERT(rc == MPI_SUCCESS, "MPI_Init failed with %d", rc);
 
@@ -348,6 +364,7 @@ int main(int argc, char **argv) {
   rc = daos_eq_create(&eq);
   ASSERT(rc == 0, "eq create failed with %d", rc);
 
+  CALI_MARK_BEGIN("daos_array-writer:pool_connect");
   if (rank == 0) {
     /** create a test pool and container for this test */
     // pool_create();
@@ -363,7 +380,9 @@ int main(int argc, char **argv) {
 
   /** share pool handle with peer tasks */
   handle_share(&poh, HANDLE_POOL, rank, poh, 1);
-
+  CALI_MARK_END("daos_array-writer:pool_connect");
+ 
+  CALI_MARK_BEGIN("daos_array-writer:cont_connect");
   if (rank == 0) {
     /** generate uuid for container */
     // uuid_generate(co_uuid);
@@ -379,6 +398,7 @@ int main(int argc, char **argv) {
 
   /** share container handle with peer tasks */
   handle_share(&coh, HANDLE_CO, rank, poh, 1);
+  CALI_MARK_END("daos_array-writer:cont_connect");
 
   /** the other tasks write the array */
   // array(arr_size_mb, steps);

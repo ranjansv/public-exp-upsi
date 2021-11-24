@@ -7,6 +7,10 @@
 #include <adios2.h>
 #include <mpi.h>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+
+
 #include "timer.hpp"
 #include "writer.h"
 
@@ -90,6 +94,10 @@ int main(int argc, char *argv[]) {
 #endif
       std::vector<double> u(localsize,0);
 
+    cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
+
+    CALI_MARK_BEGIN("writer:loop");
+
     for (int i = 0; i < steps; i++) {
 #ifdef ENABLE_TIMERS
       //MPI_Barrier(comm);
@@ -113,10 +121,10 @@ int main(int argc, char *argv[]) {
       //MPI_Barrier(comm);
 
       log << i << "\t" << time_step << "\t" << time_compute << "\t" << time_write << std::endl;
-      printf("writer rank - %d, iter - %d\n", rank, i + 1);
 #endif
     }
     writer.close();
+    CALI_MARK_END("writer:loop");
 
 
 #ifdef ENABLE_TIMERS

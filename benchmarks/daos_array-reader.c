@@ -14,6 +14,9 @@
 #include <daos/tests_lib.h>
 #include <mpi.h>
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+
 /** local task information */
 int rank = -1;
 int wrank;
@@ -269,9 +272,12 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   d_iov_set(&iov, rbuf, num_elements * sizeof(char));
   sgl.sg_iovs = &iov;
 
-  for (iter = 0; iter < steps; iter++) {
-    MPI_Barrier(MPI_COMM_WORLD);
+  CALI_MARK_BEGIN("daos_array-reader:iterations");
 
+  for (iter = 0; iter < steps; iter++) {
+    //MPI_Barrier(MPI_COMM_WORLD);
+
+    CALI_MARK_BEGIN("daos_array-reader:get_epochid");
     if (rank == 0) {
       printf("Waiting to read epoch of snapshot %d\n", iter + 1);
 
@@ -293,20 +299,30 @@ void read_data(size_t arr_size_mb, int steps, int async) {
     // MPI share epoch
     rc = MPI_Bcast(&epochs[iter], 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
     assert_int_equal(rc, MPI_SUCCESS);
+    CALI_MARK_END("daos_array-reader:get_epochid");
+
     printf("iter %d rank %d epoch: %lu\n", iter + 1, rank, epochs[iter]);
 
+    CALI_MARK_BEGIN("daos_array-reader:open_snap");
     rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
     ASSERT(rc == 0, "daos_tx_open_snap failed with %d", rc);
+    CALI_MARK_END("daos_array-reader:open_snap");
 
+    CALI_MARK_BEGIN("daos_array-reader:open_array");
     rc = daos_array_open(coh, oid, th, DAOS_OO_RW, &cell_size, &chunk_size, &oh,
                          NULL);
     ASSERT(rc == 0, "daos_array_open failed with %d", rc);
+    CALI_MARK_END("daos_array-reader:open_array");
 
+    CALI_MARK_BEGIN("daos_array-reader:read-time");
     rc = daos_array_read(oh, th, &iod, &sgl, NULL);
     ASSERT(rc == 0, "daos_array_read failed with %d", rc);
+    CALI_MARK_END("daos_array-reader:read-time");
 
+    CALI_MARK_BEGIN("daos_array-reader:close_array");
     rc = daos_array_close(oh, NULL);
     ASSERT(rc == 0, "daos_array_close failed with %d", rc);
+    CALI_MARK_END("daos_array-reader:close_array");
 
     // rc = daos_oit_open(coh, epochs[iter], &oh, NULL);
     // ASSERT(rc == 0, "daos_oit_open failed with %d", rc);
@@ -320,6 +336,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
 
     MPI_Barrier(MPI_COMM_WORLD);
   }
+  CALI_MARK_END("daos_array-reader:iterations");
 
   D_FREE(rbuf);
 }
@@ -333,6 +350,8 @@ int main(int argc, char **argv) {
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
+
+  cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
 
   rc = MPI_Init(&argc, &argv);
   ASSERT(rc == MPI_SUCCESS, "MPI_Init failed with %d", rc);
@@ -353,6 +372,8 @@ int main(int argc, char **argv) {
   rc = daos_eq_create(&eq);
   ASSERT(rc == 0, "eq create failed with %d", rc);
 
+   
+  CALI_MARK_BEGIN("daos_array-reader:pool_connect");
   if (rank == 0) {
     /** create a test pool and container for this test */
     // pool_create();
@@ -368,7 +389,9 @@ int main(int argc, char **argv) {
 
   /** share pool handle with peer tasks */
   handle_share(&poh, HANDLE_POOL, rank, poh, 1);
+  CALI_MARK_END("daos_array-reader:pool_connect");
 
+  CALI_MARK_BEGIN("daos_array-reader:cont_connect");
   if (rank == 0) {
     /** generate uuid for container */
     // uuid_generate(co_uuid);
@@ -384,6 +407,7 @@ int main(int argc, char **argv) {
 
   /** share container handle with peer tasks */
   handle_share(&coh, HANDLE_CO, rank, poh, 1);
+  CALI_MARK_END("daos_array-reader:cont_connect");
 
   /** the other tasks write the array */
   // array(arr_size_mb, steps);

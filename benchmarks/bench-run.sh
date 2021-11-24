@@ -142,8 +142,8 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,mpi-report  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,mpi-report build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -186,8 +186,8 @@ do
 	           rm ./output.bp.sst
 		   export SstVerbose=5
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,mpi-report build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,mpi-report  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset SstVerbose

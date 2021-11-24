@@ -10,6 +10,10 @@
 
 #include "timer.hpp"
 
+#include <caliper/cali.h>
+#include <caliper/cali-manager.h>
+
+
 #define ENABLE_TIMERS
 
 int main(int argc, char *argv[]) {
@@ -59,7 +63,11 @@ int main(int argc, char *argv[]) {
   std::ofstream log(log_fname.str());
   log << "step\ttotal\tread_metadata\tread_data" << std::endl;
   //log << "step\ttotal\tread\tcompute\twrite" << std::endl;
+  //
 #endif
+
+  cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
+  CALI_MARK_BEGIN("reader:loop");
 
   while (true) {
 #ifdef ENABLE_TIMERS
@@ -68,17 +76,21 @@ int main(int argc, char *argv[]) {
     timer_read_metadata.start();
 #endif
     // Begin step
+    CALI_MARK_BEGIN("reader:beginstep");
     adios2::StepStatus read_status =
         reader.BeginStep(adios2::StepMode::Read);
+    CALI_MARK_END("reader:beginstep");
 #ifdef ENABLE_TIMERS
     double time_read_metadata = timer_read_metadata.stop();
     timer_read_data.start();
 #endif
+    CALI_MARK_BEGIN("reader:inquire-n-endstep");
     if (read_status == adios2::StepStatus::NotReady) {
       // std::cout << "Stream not ready yet. Waiting...\n";
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
       continue;
     } else if (read_status != adios2::StepStatus::OK) {
+      CALI_MARK_END("reader:inquire-n-endstep");
       break;
     }
 
@@ -105,6 +117,7 @@ int main(int argc, char *argv[]) {
     reader.Get<int>(var_step_in, step);
 
     reader.EndStep();
+    CALI_MARK_END("reader:inquire-n-endstep");
 #ifdef ENABLE_TIMERS
     double time_read_data = timer_read_data.stop();
     double time_step = timer_total.stop();
@@ -114,6 +127,7 @@ int main(int argc, char *argv[]) {
     //<< time_compute << "\t" << time_write << std::endl;
 #endif
   }
+  CALI_MARK_END("reader:loop");
 #ifdef ENABLE_TIMERS
     log << "total\t" << timer_total.elapsed() << "\t" << timer_read_metadata.elapsed() << "\t"
         << timer_read_data.elapsed()
