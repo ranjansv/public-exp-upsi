@@ -126,8 +126,8 @@ do
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
-                     ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                     ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log 
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,mpi-report  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,mpi-report build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
 		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
