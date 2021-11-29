@@ -126,8 +126,8 @@ do
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=callpath-sample-report  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=callpath-sample-report build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-cg.json,output.format=json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-cg.json,output.format=json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
 		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
@@ -142,8 +142,8 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=callpath-sample-report  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=callpath-sample-report build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-cg.json,output.format=json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-cg.json,output.format=json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -184,10 +184,10 @@ do
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       else
 	           rm ./output.bp.sst
-		   export SstVerbose=5
+		   export SstVerbose=2
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=callpath-sample-report build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=callpath-sample-report  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-writer-cg.json,output.format=json)" build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-reader-cg.json,output.format=json)"  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset SstVerbose
