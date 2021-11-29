@@ -185,12 +185,14 @@ do
 	       else
 	           rm ./output.bp.sst
 		   export SstVerbose=2
+		   module load impi/19.0.9
 	           START_TIME=$SECONDS
                    ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-writer-cg.json,output.format=json)" build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
                    ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-reader-cg.json,output.format=json)"  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset SstVerbose
+		   module unload impi/19.0.9
 
                    mv writer*.log $OUTPUT_DIR/
                    mv reader*.log $OUTPUT_DIR/
