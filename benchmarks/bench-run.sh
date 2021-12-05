@@ -2,11 +2,11 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex 		# Queue (partition) name
+#SBATCH -p normal               # Queue (partition) name
 #SBATCH -N 47                # Total # of nodes 
 #SBATCH -n 1316              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 00:60:00        # Run time (hh:mm:ss)
+#SBATCH -t 05:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -87,6 +87,7 @@ do
             echo "Processing ${NR} writers ${NR_READERS} readers, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
+	    READ_DATASIZE=`echo "scale=0; $DATASIZE * ($READ_WRITE_RATIO)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
@@ -126,8 +127,8 @@ do
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-cg.json,output.format=json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-cg.json,output.format=json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-${NR_READERS}ranks-${READ_DATASIZE}mb.json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	       else
 		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
                    ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
@@ -142,8 +143,8 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-cg.json,output.format=json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-cg.json,output.format=json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-${NR_READERS}ranks-${READ_DATASIZE}mb.json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -187,8 +188,8 @@ do
 		   export SstVerbose=2
 		   module load impi/19.0.9
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-writer-cg.json,output.format=json)" build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-reader-cg.json,output.format=json)"  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-writer-${NR}ranks-${DATASIZE}mb.json)" build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-reader-${NR_READERS}ranks-${READ_DATASIZE}mb)"  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset SstVerbose
