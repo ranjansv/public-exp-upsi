@@ -67,10 +67,6 @@ do
 		FILENAME="./mnt/dfuse/output.bp"
 		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
 		PRELOAD_LIBPATH="/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64/libioil.so"
-	elif grep -q "sst" <<< "$IO_NAME"; then
-		ENG_TYPE="sst"
-		FILENAME="output.bp"
-
 	#Following engine types are for DAOS which don't use ADIOS2
 	elif grep -q "daos-array" <<< "$IO_NAME"; then
 		ENG_TYPE="daos-array"
@@ -122,8 +118,8 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-		   wait
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   #ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    #mv writer*.log $OUTPUT_DIR/
@@ -140,9 +136,9 @@ do
 		   sleep 60
 
 	           START_TIME=$SECONDS
-                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
-                   #ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 		   export TACC_TASKS_PER_NODE=1
