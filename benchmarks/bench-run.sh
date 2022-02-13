@@ -79,12 +79,11 @@ do
 
         for DATASIZE in $DATA_PER_RANK
         do
-	    #Delete previous writer*.log and reader*.log
-            rm writer-*.log reader-*.log &> /dev/null
-	    NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
+	    #Delete previous writer*.log
+            rm writer-*.log &> /dev/null
 	    echo ""
 	    echo ""
-            echo "Processing ${NR} writers ${NR_READERS} readers, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
+            echo "Processing ${NR} writers , ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
 	    READ_DATASIZE=`echo "scale=0; $DATASIZE * ($READ_WRITE_RATIO)" | bc`
@@ -92,7 +91,6 @@ do
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-	    #NR_READERS=$NR
 
 	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "daos-posix" ]]
             then
@@ -117,39 +115,18 @@ do
 	    export I_MPI_PIN=0
 
 	    writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
-	    #reader_nodes=$((($NR_READERS + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
 	    i=$((writer_nodes + 1))
-	    offset=$(( (i-1)*28 ))
-            echo "First Reader Node: $i, offset: $offset" 
 
-            #Readers execute after writers
 	    if [ $BENCH_TYPE == "writer" ]
 	    then
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-${NR_READERS}ranks-${READ_DATASIZE}mb.json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-	       else
-		   dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID
-                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-                   mv writer*.log $OUTPUT_DIR/
-                   mv reader*.log $OUTPUT_DIR/
-		   fusermount -u $MOUNTPOINT
-	       fi
-	    #Readers and Writers execute concurrently
-	    elif [ $BENCH_TYPE == "workflow" ]
-	    then
-	       if [ $ENG_TYPE == "daos-array" ]
-	       then
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-reader-${NR_READERS}ranks-${READ_DATASIZE}mb.json)" build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 		   wait
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    #mv writer*.log $OUTPUT_DIR/
-                   #mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       elif [ $ENG_TYPE == "daos-posix" ]
 	       then
@@ -163,11 +140,9 @@ do
 		   sleep 60
 
 	           START_TIME=$SECONDS
-                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -n $NR_READERS -o $NR build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                   ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
                    #ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   #ibrun -o $offset -n $NR_READERS  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 		   export TACC_TASKS_PER_NODE=1
@@ -181,22 +156,6 @@ do
 
 
                    mv writer*.log $OUTPUT_DIR/
-                   mv reader*.log $OUTPUT_DIR/
-	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-	       else
-	           rm ./output.bp.sst
-		   export SstVerbose=2
-		   module load impi/19.0.9
-	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-writer-${NR}ranks-${DATASIZE}mb.json)" build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &
-                   ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/sst-reader-${NR_READERS}ranks-${READ_DATASIZE}mb.json)"  build/reader $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log &
-		   wait
-	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-		   unset SstVerbose
-		   module unload impi/19.0.9
-
-                   mv writer*.log $OUTPUT_DIR/
-                   mv reader*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 	       fi
 	    fi
