@@ -6,7 +6,7 @@
 #SBATCH -N 5                # Total # of nodes 
 #SBATCH -n 140              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 02:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 01:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -85,7 +85,6 @@ do
             echo "Processing ${NR} writers , ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
             #Choose PROCS and STEPS so that global array size is a whole numebr
 	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
-	    READ_DATASIZE=`echo "scale=0; $DATASIZE * ($READ_WRITE_RATIO)" | bc`
 	    echo "global array size: $GLOBAL_ARRAY_SIZE"
 
 	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
@@ -141,7 +140,7 @@ do
 	           START_TIME=$SECONDS
                    #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
-                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 		   export TACC_TASKS_PER_NODE=1
@@ -160,7 +159,7 @@ do
 	       then
 		   rm -rf ./mnt/lustre/* &> /dev/null
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
                    mv writer*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log

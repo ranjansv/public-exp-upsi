@@ -5,11 +5,12 @@
            Configuration for Benchmark writers
         ============================================-->
 
-    <io name="daos-posix">
+    <io name="posix">
         <engine type="BP5">
             <parameter key="Profile" value="Off"/>
             <parameter key="OpenTimeoutSecs" value="10.0"/>
             <parameter key="StatsLevel" value="0"/>
+            <parameter key="AggregationType" value="twolevelshm"/>
             <!--parameter key="StreamReader" value="On"/-->
         </engine>
     </io>
