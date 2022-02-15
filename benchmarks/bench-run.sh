@@ -2,11 +2,11 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex                 # Queue (partition) name
-#SBATCH -N 2                # Total # of nodes 
-#SBATCH -n 56              # Total # of mpi tasks
+#SBATCH -p flex			# Queue (partition) name
+#SBATCH -N 5                # Total # of nodes 
+#SBATCH -n 140              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 00:10:00        # Run time (hh:mm:ss)
+#SBATCH -t 02:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -71,6 +71,9 @@ do
 	elif grep -q "daos-array" <<< "$IO_NAME"; then
 		ENG_TYPE="daos-array"
 		FILENAME="N/A"
+	elif grep -q "lustre-posix" <<< "$IO_NAME"; then
+		ENG_TYPE="lustre-posix"
+		FILENAME="./mnt/lustre/"
 	fi
 
         for DATASIZE in $DATA_PER_RANK
@@ -138,7 +141,7 @@ do
 	           START_TIME=$SECONDS
                    #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
-                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 		   export TACC_TASKS_PER_NODE=1
@@ -153,6 +156,15 @@ do
 
                    mv writer*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+	       elif [ $ENG_TYPE == "lustre-posix" ]
+	       then
+		   rm -rf ./mnt/lustre/* &> /dev/null
+	           START_TIME=$SECONDS
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+                   mv writer*.log $OUTPUT_DIR/
+	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+		   #rm -rf ./mnt/lustre/* &> /dev/null
 	       fi
 	    fi
         done
