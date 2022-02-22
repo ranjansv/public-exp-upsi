@@ -2,6 +2,7 @@ req_writer_ranks=$1
 ranks_per_node=28
 
 echo "Writer # ranks: ${req_writer_ranks}"
+echo "ranks_per_node: $ranks_per_node"
 
 writer_num_nodes=$((($req_writer_ranks + $ranks_per_node - 1)/$ranks_per_node))
 

@@ -2,14 +2,15 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex			# Queue (partition) name
-#SBATCH -N 5                # Total # of nodes 
-#SBATCH -n 140              # Total # of mpi tasks
+#SBATCH -p flex		# Queue (partition) name
+#SBATCH -N 10                # Total # of nodes 
+#SBATCH -n 280              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 01:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 02:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
+POOL_UUID=`dmg -i -o $daos_config pool list --verbose | tail -2|head -1|awk '{print $2}'`
 echo "POOL_UUID: $POOL_UUID"
 echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
 
@@ -22,6 +23,8 @@ source ${CONFIG_FILE}
 TIMESTAMP=`echo $(date +%Y-%m-%d-%H:%M:%S)`
 RESULT_DIR="results/$TIMESTAMP"
 mkdir -p $RESULT_DIR
+
+echo "Result dir: $RESULT_DIR"
 
 rm results/latest
 ln -s $TIMESTAMP results/latest
@@ -120,8 +123,8 @@ do
 	       if [ $ENG_TYPE == "daos-array" ]
 	       then
 	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   #ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   #ibrun -o 0 -n $NR   env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
                    #mv writer*.log $OUTPUT_DIR/
@@ -140,7 +143,7 @@ do
 	           START_TIME=$SECONDS
                    #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 
-                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
 	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 		   export TACC_TASKS_PER_NODE=1
@@ -164,6 +167,9 @@ do
                    mv writer*.log $OUTPUT_DIR/
 	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 		   #rm -rf ./mnt/lustre/* &> /dev/null
+		   echo "Listing Lustre files"
+		   ls -lh ./mnt/lustre/
+		   rm -rf ./mnt/lustre/* &> /dev/null
 	       fi
 	    fi
         done

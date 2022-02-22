@@ -121,6 +121,8 @@ int main(int argc, char *argv[]) {
       //MPI_Barrier(comm);
 
       log << i << "\t" << time_step << "\t" << time_compute << "\t" << time_write << std::endl;
+      if(rank == 0)
+          std::cout << "Step: " << i + 1 << std::endl;
 #endif
     }
     writer.close();
