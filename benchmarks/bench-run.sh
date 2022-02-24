@@ -40,7 +40,6 @@ cd ..
 
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
-cp ./adios2.xml $RESULT_DIR
 
 SCRIPT_NAME="bench-run.sh"
 cp ./$SCRIPT_NAME  $RESULT_DIR/
@@ -60,124 +59,135 @@ fi
 
 RANKS_PER_NODE=28
 
-for NR in $PROCS
+for ADIOS_XML in $AGGREGATORS
 do
-    for IO_NAME in $ENGINE
-    do
-	#Parse IO_NAME for engine and storage type in case of DAOS
-	if grep -q "daos-posix" <<< "$IO_NAME"; then
-		ENG_TYPE="daos-posix"
-		FILENAME="./mnt/dfuse/output.bp"
-		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
-		PRELOAD_LIBPATH="/home1/06753/soychan/work/4NODE/BUILDS/latest/daos/install/lib64/libioil.so"
-	#Following engine types are for DAOS which don't use ADIOS2
-	elif grep -q "daos-array" <<< "$IO_NAME"; then
-		ENG_TYPE="daos-array"
-		FILENAME="N/A"
-	elif grep -q "lustre-posix" <<< "$IO_NAME"; then
-		ENG_TYPE="lustre-posix"
-		FILENAME="./mnt/lustre/"
-	fi
 
-        for DATASIZE in $DATA_PER_RANK
-        do
-	    #Delete previous writer*.log
+  cp adios-config/${ADIOS_XML}.xml adios2.xml 
+
+  #Save ADIOS config for each aggregator
+  PREFIX_DIR="${RESULT_DIR}/${ADIOS_XML}"
+  mkdir -p $PREFIX_DIR
+  cp adios-config/${ADIOS_XML}.xml $PREFIX_DIR/
+
+  for NR in $PROCS
+  do
+      for IO_NAME in $ENGINE
+      do
+  	#Parse IO_NAME for engine and storage type in case of DAOS
+  	if grep -q "daos-posix" <<< "$IO_NAME"; then
+  		ENG_TYPE="daos-posix"
+  		FILENAME="./mnt/dfuse/output.bp"
+  		MOUNTPOINT="/work2/08059/ranjansv/frontera/exp-upsi/benchmarks/mnt/dfuse"
+  		PRELOAD_LIBPATH="/work2/08126/dbohninx/frontera/4NODE/BUILDS/latest/daos/install/lib64/libioil.so"
+  	#Following engine types are for DAOS which don't use ADIOS2
+  	elif grep -q "daos-array" <<< "$IO_NAME"; then
+  		ENG_TYPE="daos-array"
+  		FILENAME="N/A"
+  	elif grep -q "lustre-posix" <<< "$IO_NAME"; then
+  		ENG_TYPE="lustre-posix"
+  		FILENAME="./mnt/lustre/"
+  	fi
+  
+          for DATASIZE in $DATA_PER_RANK
+          do
+  	    #Delete previous writer*.log
             rm writer-*.log &> /dev/null
-	    echo ""
-	    echo ""
-            echo "Processing ${NR} writers , ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
-            #Choose PROCS and STEPS so that global array size is a whole numebr
-	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
-	    echo "global array size: $GLOBAL_ARRAY_SIZE"
-
-	    OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
+  	    echo ""
+  	    echo ""
+            echo "Processing ${ADIOS_XML} adios aggregator,${NR} writers , ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
+              #Choose PROCS and STEPS so that global array size is a whole numebr
+  	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
+  	    echo "global array size: $GLOBAL_ARRAY_SIZE"
+  
+  	    OUTPUT_DIR="$PREFIX_DIR/${NR}ranks/${IO_NAME}/${DATASIZE}mb"
             mkdir -p $OUTPUT_DIR
-
-	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "daos-posix" ]]
-            then
-		    echo "Destroying all containers "
-		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
-                    if [ $ENG_TYPE == "daos-array" ]
-		    then
-		        #Delete share directory contents with previous epoch values
-                        mkdir -p  share/
-	                rm -rf share/*
-			echo "0" > share/snapshot_count.txt
-			echo "0" > share/oid_part_count.txt
-		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
-                        echo "New container UUID: $CONT_UUID"
-		    elif [ $ENG_TYPE == "daos-posix" ]
-		    then
-		        CONT_UUID=`daos cont create --pool=$POOL_UUID --type=POSIX|grep -i 'created container'|awk '{print $4}'`
-                        echo "New POSIX container UUID: $CONT_UUID"
-		    fi
-	    fi
-
-	    export I_MPI_PIN=0
-
-	    writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
-	    i=$((writer_nodes + 1))
-
-	    if [ $BENCH_TYPE == "writer" ]
-	    then
-	       if [ $ENG_TYPE == "daos-array" ]
-	       then
-	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                   #ibrun -o 0 -n $NR   env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-
-                   #mv writer*.log $OUTPUT_DIR/
-	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-	       elif [ $ENG_TYPE == "daos-posix" ]
-	       then
-		   export TACC_TASKS_PER_NODE=1
-		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID &
-		   unset TACC_TASKS_PER_NODE
-
-		   #ibrun waits for dfuse deamon which not return and hangs up without the &. Hence, we run ibrun in background and put a sleep so that dfuse mount
-		   #is complete on all nodes
-
-		   sleep 60
-
-	           START_TIME=$SECONDS
-                   #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-
-                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-
-		   export TACC_TASKS_PER_NODE=1
-		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
-		   unset TACC_TASKS_PER_NODE
-
-
-                   #If the readers are done, writers ought be done. However, we place a catch all wait here just in case. So that we dont have stale writers from the
-		   #previous
-		   wait
-
-
-                   mv writer*.log $OUTPUT_DIR/
-	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-	       elif [ $ENG_TYPE == "lustre-posix" ]
-	       then
-		   rm -rf ./mnt/lustre/* &> /dev/null
-	           START_TIME=$SECONDS
-                   ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-                   mv writer*.log $OUTPUT_DIR/
-	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-		   #rm -rf ./mnt/lustre/* &> /dev/null
-		   echo "Listing Lustre files"
-		   ls -lh ./mnt/lustre/
-		   rm -rf ./mnt/lustre/* &> /dev/null
-	       fi
-	    fi
-        done
-    done
+  
+  	    if [[ $ENG_TYPE == "daos-array" || $ENG_TYPE == "daos-posix" ]]
+              then
+  		    echo "Destroying all containers "
+  		    daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
+                      if [ $ENG_TYPE == "daos-array" ]
+  		    then
+  		        #Delete share directory contents with previous epoch values
+                          mkdir -p  share/
+  	                rm -rf share/*
+  			echo "0" > share/snapshot_count.txt
+  			echo "0" > share/oid_part_count.txt
+  		        CONT_UUID=`daos cont create --pool=$POOL_UUID|grep -i 'created container'|awk '{print $4}'`
+                          echo "New container UUID: $CONT_UUID"
+  		    elif [ $ENG_TYPE == "daos-posix" ]
+  		    then
+  		        CONT_UUID=`daos cont create --pool=$POOL_UUID --type=POSIX|grep -i 'created container'|awk '{print $4}'`
+                          echo "New POSIX container UUID: $CONT_UUID"
+  		    fi
+  	    fi
+  
+  	    export I_MPI_PIN=0
+  
+  	    writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
+  	    i=$((writer_nodes + 1))
+  
+  	    if [ $BENCH_TYPE == "writer" ]
+  	    then
+  	       if [ $ENG_TYPE == "daos-array" ]
+  	       then
+  	           START_TIME=$SECONDS
+                     ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                     #ibrun -o 0 -n $NR   env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  
+                     #mv writer*.log $OUTPUT_DIR/
+  	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+  	       elif [ $ENG_TYPE == "daos-posix" ]
+  	       then
+  		   export TACC_TASKS_PER_NODE=1
+  		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID &
+  		   unset TACC_TASKS_PER_NODE
+  
+  		   #ibrun waits for dfuse deamon which not return and hangs up without the &. Hence, we run ibrun in background and put a sleep so that dfuse mount
+  		   #is complete on all nodes
+  
+  		   sleep 60
+  
+  	           START_TIME=$SECONDS
+                     #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  
+                     ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  
+  		   export TACC_TASKS_PER_NODE=1
+  		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
+  		   unset TACC_TASKS_PER_NODE
+  
+  
+                     #If the readers are done, writers ought be done. However, we place a catch all wait here just in case. So that we dont have stale writers from the
+  		   #previous
+  		   wait
+  
+  
+                     mv writer*.log $OUTPUT_DIR/
+  	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+  	       elif [ $ENG_TYPE == "lustre-posix" ]
+  	       then
+  		   rm -rf ./mnt/lustre/* &> /dev/null
+  	           START_TIME=$SECONDS
+                     ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+                     mv writer*.log $OUTPUT_DIR/
+  	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+  		   #rm -rf ./mnt/lustre/* &> /dev/null
+  		   echo "Listing Lustre files"
+  		   ls -lh ./mnt/lustre/
+  		   rm -rf ./mnt/lustre/* &> /dev/null
+  	       fi
+  	    fi
+          done
+      done
+  done
 done
 
 ./daos-destroy-cont.sh
-./parse-result.sh $RESULT_DIR
+#./parse-result.sh $RESULT_DIR
 
 echo "CSV directory:"
 echo "$RESULT_DIR/csv"
@@ -186,9 +196,7 @@ echo "$RESULT_DIR/csv"
 mkdir -p "export-${RESULT_DIR}/csv/"
 cp $RESULT_DIR/csv/*.csv export-${RESULT_DIR}/csv/
 cp ${CONFIG_FILE} export-$RESULT_DIR/config.sh
-cp ./adios2.xml export-$RESULT_DIR
 cp ./$SCRIPT_NAME export-$RESULT_DIR
-mount|grep dax > export-$RESULT_DIR/fs-type.log
 ls -1t upsi*|head -2|xargs -L 1 -I {} sh -c "mv {} results/latest/"
 
 
