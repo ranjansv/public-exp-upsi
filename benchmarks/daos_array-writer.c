@@ -214,7 +214,10 @@ void write_data(size_t arr_size_mb, int steps, int async) {
  
   CALI_MARK_BEGIN("daos_array-writer:oid-gen-n-share"); 
   if (rank == 0) {
-    oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0, 0);
+    //oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0, 0);
+    oid.hi = 0;
+    oid.lo = 3;
+    daos_array_generate_oid(coh, &oid, true, 0, 0, 0);
     rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size, chunk_size, &oh,
                            NULL);
     assert_rc_equal(rc, 0);
