@@ -6,7 +6,7 @@
 #SBATCH -N 10                # Total # of nodes 
 #SBATCH -n 280              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 04:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 03:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -51,11 +51,13 @@ echo $is_daos_agent_running
 if [[ $is_daos_agent_running -eq "" ]]
 then
 export TACC_TASKS_PER_NODE=1
-ibrun -np $SLURM_JOB_NUM_NODES  ~/bin/daos_startup.sh
+ibrun -np $SLURM_JOB_NUM_NODES  ./daos_startup.sh &
 unset TACC_TASKS_PER_NODE
 else
    echo "daos_agent is already running"
 fi
+
+sleep 60
 
 RANKS_PER_NODE=28
 
