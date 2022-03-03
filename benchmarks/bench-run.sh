@@ -6,7 +6,7 @@
 #SBATCH -N 10                # Total # of nodes 
 #SBATCH -n 280              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 03:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 00:30:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -41,7 +41,7 @@ cd ..
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 
-SCRIPT_NAME="bench-run.sh"
+SCRIPT_NAME="exp-bench-run.sh"
 cp ./$SCRIPT_NAME  $RESULT_DIR/
 
 
@@ -57,9 +57,12 @@ else
    echo "daos_agent is already running"
 fi
 
+echo "Waiting for agent to initialize..."
 sleep 60
 
+
 RANKS_PER_NODE=28
+echo "Staring tests"
 
 
   for NR in $PROCS
@@ -85,7 +88,6 @@ RANKS_PER_NODE=28
           for DATASIZE in $DATA_PER_RANK
           do
   	    #Delete previous writer*.log
-            rm writer-*.log &> /dev/null
   	    echo ""
   	    echo ""
             echo "Processing ${NR} writers , ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
@@ -111,10 +113,14 @@ RANKS_PER_NODE=28
                           echo "New container UUID: $CONT_UUID"
 	           OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/"
 		   mkdir -p $OUTPUT_DIR
+		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
+		   export TACC_MPI_GETMODE=impi_hydra
   	           START_TIME=$SECONDS
                      ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                      #ibrun -o 0 -n $NR   env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+		   unset I_MPI_ROOT
+		   unset TACC_MPI_GETMODE
   
                      #mv writer*.log $OUTPUT_DIR/
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
@@ -122,6 +128,7 @@ RANKS_PER_NODE=28
   	       then
                   for ADIOS_XML in $AGGREGATORS
                   do
+                   rm writer-*.log &> /dev/null
 		   echo ""
 		   echo "Aggregator: $ADIOS_XML"
                    cp adios-config/${ADIOS_XML}.xml adios2.xml
@@ -135,14 +142,20 @@ RANKS_PER_NODE=28
                    mkdir -p $OUTPUT_DIR
                    cp adios-config/${ADIOS_XML}.xml $OUTPUT_DIR/
 
+		   echo "Mounting daos-posix using dfuse"
+
   		   export TACC_TASKS_PER_NODE=1
   		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID &
   		   unset TACC_TASKS_PER_NODE
   
-  		   #ibrun waits for dfuse deamon which not return and hangs up without the &. Hence, we run ibrun in background and put a sleep so that dfuse mount
+  		   #ibrun waits for dfuse deamon which not return and hangs up without the &. Hence, we run ibrun in background and put a sleep so that dfuse moun
   		   #is complete on all nodes
   
   		   sleep 60
+
+		   echo "Running daos-posix workload"
+		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
+		   export TACC_MPI_GETMODE=impi_hydra
   
   	           START_TIME=$SECONDS
                      #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
@@ -151,6 +164,10 @@ RANKS_PER_NODE=28
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
   		   rm -rf ./mnt/dfuse/* &> /dev/null
+		   unset I_MPI_ROOT
+		   unset TACC_MPI_GETMODE
+
+		   echo "Unmounting daos-posix"
   
   		   export TACC_TASKS_PER_NODE=1
   		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
@@ -159,7 +176,7 @@ RANKS_PER_NODE=28
   
                      #If the readers are done, writers ought be done. However, we place a catch all wait here just in case. So that we dont have stale writers from the
   		   #previous
-  		   wait
+  		   #wait
   
                    mv writer*.log $OUTPUT_DIR/
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
@@ -168,6 +185,7 @@ RANKS_PER_NODE=28
   	       then
                   for ADIOS_XML in $AGGREGATORS
                   do
+                   rm writer-*.log &> /dev/null
 		   echo ""
 		   echo "Aggregator: $ADIOS_XML"
                    cp adios-config/${ADIOS_XML}.xml adios2.xml
@@ -176,9 +194,15 @@ RANKS_PER_NODE=28
                    #Save ADIOS config for each aggregator
                    mkdir -p $OUTPUT_DIR
   		   rm -rf ./mnt/lustre/* &> /dev/null
+
+		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
+		   export TACC_MPI_GETMODE=impi_hydra
   	           START_TIME=$SECONDS
                      ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
+
+		   unset I_MPI_ROOT
+		   unset TACC_MPI_GETMODE
                      mv writer*.log $OUTPUT_DIR/
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
   		   #rm -rf ./mnt/lustre/* &> /dev/null

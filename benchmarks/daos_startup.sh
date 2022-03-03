@@ -15,4 +15,7 @@ mkdir -p $DAOS_AGENT_DIR
 
 pkill daos_agent
 
-daos_agent -i -o $DAOS_AGENT_CONF -l $DAOS_AGENT_LOG -s ${DAOS_AGENT_DIR}
+#START_TIME=$SECONDS
+daos_agent -i -o $DAOS_AGENT_CONF -l $DAOS_AGENT_LOG -s ${DAOS_AGENT_DIR} &
+#ELAPSED_TIME=$(($SECONDS - $START_TIME))
+#echo "daos agent start time: $ELAPSED_TIME"
