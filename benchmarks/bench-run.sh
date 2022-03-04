@@ -6,7 +6,7 @@
 #SBATCH -N 10                # Total # of nodes 
 #SBATCH -n 280              # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 00:30:00        # Run time (hh:mm:ss)
+#SBATCH -t 04:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -145,7 +145,7 @@ echo "Staring tests"
 		   echo "Mounting daos-posix using dfuse"
 
   		   export TACC_TASKS_PER_NODE=1
-  		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID &
+  		   ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID --disable-caching &
   		   unset TACC_TASKS_PER_NODE
   
   		   #ibrun waits for dfuse deamon which not return and hangs up without the &. Hence, we run ibrun in background and put a sleep so that dfuse moun
@@ -170,7 +170,7 @@ echo "Staring tests"
 		   echo "Unmounting daos-posix"
   
   		   export TACC_TASKS_PER_NODE=1
-  		   ibrun -np $SLURM_JOB_NUM_NODES fusermount -u $MOUNTPOINT
+  		   ibrun -np $SLURM_JOB_NUM_NODES fusermount3 -u $MOUNTPOINT
   		   unset TACC_TASKS_PER_NODE
   
   
