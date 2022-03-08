@@ -2,11 +2,11 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex         # Queue (partition) name
-#SBATCH -N 19                # Total # of nodes 
-#SBATCH -n 532		# Total # of mpi tasks
+#SBATCH -p normal 	# Queue (partition) name
+#SBATCH -N 37                # Total # of nodes 
+#SBATCH -n 1036		# Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 02:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 16:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -41,7 +41,7 @@ cd ..
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 
-SCRIPT_NAME=`basename "$0"`
+SCRIPT_NAME="bench-run.sh"
 cp ./$SCRIPT_NAME  $RESULT_DIR/
 
 
@@ -86,7 +86,11 @@ echo "Staring tests"
   
           for DATASIZE in $DATA_PER_RANK
           do
-  	    #Delete previous writer*.log
+	    TOTAL_DATA_SIZE=`echo "scale=0; $DATASIZE * ($NR) * $STEPS" | bc`
+	    if [ $TOTAL_DATA_SIZE != $PRESET_TOTAL_DATA_SIZE ]
+	    then
+	    	continue
+	    fi
   	    echo ""
   	    echo ""
             echo "Processing ${NR} writers , ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb"
@@ -116,7 +120,7 @@ echo "Staring tests"
 		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
 		   export TACC_MPI_GETMODE=impi_hydra
   	           START_TIME=$SECONDS
-                     ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                     ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
                      #ibrun -o 0 -n $NR   env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 		   unset I_MPI_ROOT
@@ -219,7 +223,8 @@ echo "Staring tests"
 done
 
 ./daos-destroy-cont.sh
-#./parse-result.sh $RESULT_DIR
+echo "Generating CSV files"
+./parse-result.sh $RESULT_DIR
 
 echo "CSV directory:"
 echo "$RESULT_DIR/csv"

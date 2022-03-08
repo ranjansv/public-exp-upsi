@@ -6,11 +6,10 @@
         ============================================-->
 
     <io name="posix">
-        <engine type="BP5">
+        <engine type="BP4">
             <parameter key="Profile" value="Off"/>
             <parameter key="OpenTimeoutSecs" value="10.0"/>
             <parameter key="StatsLevel" value="0"/>
-            <parameter key="AggregationType" value="twolevelshm"/>
         </engine>
     </io>
 </adios-config>
