@@ -6,7 +6,7 @@
 #SBATCH -N 37                # Total # of nodes 
 #SBATCH -n 1036		# Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 16:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 06:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -146,7 +146,6 @@ echo "Staring tests"
 		   echo "Mounting daos-posix using dfuse"
 
   		   export TACC_TASKS_PER_NODE=1
-  		   #ibrun -np $SLURM_JOB_NUM_NODES  dfuse --mountpoint=$MOUNTPOINT --pool=$POOL_UUID --container=$CONT_UUID &
   		   ibrun -np $SLURM_JOB_NUM_NODES launch_dfuse.sh $MOUNTPOINT $POOL_UUID $CONT_UUID &
   		   unset TACC_TASKS_PER_NODE
 
@@ -170,8 +169,6 @@ echo "Staring tests"
 		      export TACC_MPI_GETMODE=impi_hydra
   
   	              START_TIME=$SECONDS
-                      #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-  
                       ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $OUTPUT_DIR $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
@@ -209,7 +206,7 @@ echo "Staring tests"
 		   unset I_MPI_ROOT
 		   unset TACC_MPI_GETMODE
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
-  		   #rm -rf ./mnt/lustre/* &> /dev/null
+
   		   echo "Listing Lustre files"
   		   ls -lh ./mnt/lustre/
   		   rm -rf ./mnt/lustre/* &> /dev/null
