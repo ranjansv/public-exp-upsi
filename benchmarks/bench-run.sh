@@ -126,7 +126,6 @@ echo "Staring tests"
 		   unset I_MPI_ROOT
 		   unset TACC_MPI_GETMODE
   
-                     #mv writer*.log $OUTPUT_DIR/
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
   	       elif [ $ENG_TYPE == "daos-posix" ]
   	       then
@@ -152,7 +151,6 @@ echo "Staring tests"
 
                   for ADIOS_XML in $AGGREGATORS
                   do
-                      rm writer-*.log &> /dev/null
 		      echo ""
 		      echo "Aggregator: $ADIOS_XML"
                       cp adios-config/${ADIOS_XML}.xml adios2.xml
@@ -172,13 +170,10 @@ echo "Staring tests"
                       ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-  		      rm -rf ./mnt/dfuse/* &> /dev/null
+  		      rm -rf $FILENAME/* &> /dev/null 
 		      unset I_MPI_ROOT
 		      unset TACC_MPI_GETMODE
 
-  
-  
-                      mv writer*.log $OUTPUT_DIR/
   	              echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 		   done
 		   echo "Unmounting daos-posix"
@@ -191,7 +186,6 @@ echo "Staring tests"
   	       then
                   for ADIOS_XML in $AGGREGATORS
                   do
-                   rm writer-*.log &> /dev/null
 		   echo ""
 		   echo "Aggregator: $ADIOS_XML"
                    cp adios-config/${ADIOS_XML}.xml adios2.xml
@@ -209,7 +203,6 @@ echo "Staring tests"
 
 		   unset I_MPI_ROOT
 		   unset TACC_MPI_GETMODE
-                   mv writer*.log $OUTPUT_DIR/
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
   		   #rm -rf ./mnt/lustre/* &> /dev/null
   		   echo "Listing Lustre files"
