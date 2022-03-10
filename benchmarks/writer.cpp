@@ -53,9 +53,10 @@ int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
-  std::string filename = std::string(argv[2]);
-  size_t arr_size_mb = std::stoi(argv[3]);
-  int steps = std::stoi(argv[4]);
+  std::string output_dir = std::string(argv[2]);
+  std::string filename = std::string(argv[3]);
+  size_t arr_size_mb = std::stoi(argv[4]);
+  int steps = std::stoi(argv[5]);
 
   int rank, procs, wrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
@@ -69,6 +70,7 @@ int main(int argc, char *argv[]) {
 
   if (rank == 0) {
     std::cout << "engine_type: " << engine_type << std::endl;
+    std::cout << "output_dir: " << output_dir << std::endl;
     std::cout << "filename: " << filename << std::endl;
     std::cout << "arr_size_mb: " << arr_size_mb << std::endl;
     std::cout << "steps: " << steps << std::endl;
@@ -87,7 +89,7 @@ int main(int argc, char *argv[]) {
     Timer timer_write;
 
     std::ostringstream log_fname;
-    log_fname << "writer-" << rank << ".log";
+    log_fname << output_dir << "/writer-" << rank << ".log";
 
     std::ofstream log(log_fname.str());
     log << "step\ttotal\tcompute\twrite" << std::endl;

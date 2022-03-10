@@ -26,6 +26,11 @@ mkdir -p $RESULT_DIR
 
 echo "Result dir: $RESULT_DIR"
 
+echo "ADIOS branch"
+cd /home1/08059/ranjansv/ADIOS2/
+git branch
+cd -
+
 rm results/latest
 ln -s $TIMESTAMP results/latest
 
@@ -167,7 +172,7 @@ echo "Staring tests"
   	              START_TIME=$SECONDS
                       #ibrun -n $NR -o 0 build/writer $ENG_TYPE $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   
-                      ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                      ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $OUTPUT_DIR $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
   		      rm -rf $FILENAME/* &> /dev/null 
@@ -198,7 +203,7 @@ echo "Staring tests"
 		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
 		   export TACC_MPI_GETMODE=impi_hydra
   	           START_TIME=$SECONDS
-                     ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+                     ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report build/writer posix $OUTPUT_DIR $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
 		   unset I_MPI_ROOT
