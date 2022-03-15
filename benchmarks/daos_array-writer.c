@@ -284,16 +284,19 @@ void write_data(size_t arr_size_mb, int steps, int async) {
     // rc = daos_tx_open(coh, &th, 0, NULL);
     // assert_rc_equal(rc, 0);
     // rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
-    CALI_MARK_BEGIN("daos_array-writer:write-time");
+    CALI_MARK_BEGIN("daos_array-writer:write-time-outside-barrier");
+    MPI_Barrier(MPI_COMM_WORLD);
+    CALI_MARK_BEGIN("daos_array-writer:write-time-inside-barrier");
     rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
-    CALI_MARK_END("daos_array-writer:write-time");
+    CALI_MARK_END("daos_array-writer:write-time-inside-barrier");
+    MPI_Barrier(MPI_COMM_WORLD);
+    CALI_MARK_END("daos_array-writer:write-time-outside-barrier");
     // rc = daos_tx_commit(th, NULL);
     // assert_rc_equal(rc, 0);
     // rc = daos_tx_close(th, NULL);
     // assert_rc_equal(rc, 0);
 
-    MPI_Barrier(MPI_COMM_WORLD);
     CALI_MARK_BEGIN("daos_array-writer:snapshot-time");
     if (rank == 0) {
       // sprintf(snapshot_name, "snapshot-", iter + 1);

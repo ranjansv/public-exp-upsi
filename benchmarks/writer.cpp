@@ -10,13 +10,13 @@
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 
-
 #include "timer.hpp"
 #include "writer.h"
 
 #define MB_in_bytes 1048576
 
 #define ENABLE_TIMERS
+#undef ENABLE_TIMERS
 
 Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb)
     : io(io) {
@@ -25,8 +25,8 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb)
   local_size = global_array_size / procs;
   offset = rank * local_size;
 
-  var_array = io.DefineVariable<double>("U", {global_array_size}, {offset},
-                                        {local_size});
+  var_array = io.DefineVariable<double>("U", { global_array_size }, { offset },
+                                        { local_size });
 
   var_step = io.DefineVariable<int>("step");
 }
@@ -35,11 +35,9 @@ void Writer::open(const std::string &fname) {
   writer = io.Open(fname, adios2::Mode::Write);
 }
 
-int Writer::getlocalsize() {
-	return local_size;
-}
+int Writer::getlocalsize() { return local_size; }
 
-void Writer::write(int step, std::vector<double>& u) {
+void Writer::write(int step, std::vector<double> &u) {
 
   writer.BeginStep();
   writer.Put<int>(var_step, &step);
@@ -53,10 +51,9 @@ int main(int argc, char *argv[]) {
 
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
-  std::string output_dir = std::string(argv[2]);
-  std::string filename = std::string(argv[3]);
-  size_t arr_size_mb = std::stoi(argv[4]);
-  int steps = std::stoi(argv[5]);
+  std::string filename = std::string(argv[2]);
+  size_t arr_size_mb = std::stoi(argv[3]);
+  int steps = std::stoi(argv[4]);
 
   int rank, procs, wrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
@@ -70,7 +67,6 @@ int main(int argc, char *argv[]) {
 
   if (rank == 0) {
     std::cout << "engine_type: " << engine_type << std::endl;
-    std::cout << "output_dir: " << output_dir << std::endl;
     std::cout << "filename: " << filename << std::endl;
     std::cout << "arr_size_mb: " << arr_size_mb << std::endl;
     std::cout << "steps: " << steps << std::endl;
@@ -83,62 +79,30 @@ int main(int argc, char *argv[]) {
     int localsize = writer.getlocalsize();
 
     writer.open(filename);
-#ifdef ENABLE_TIMERS
-    Timer timer_total;
-    Timer timer_compute;
-    Timer timer_write;
 
-    std::ostringstream log_fname;
-    log_fname << output_dir << "/writer-" << rank << ".log";
-
-    std::ofstream log(log_fname.str());
-    log << "step\ttotal\tcompute\twrite" << std::endl;
-#endif
-      std::vector<double> u(localsize,0);
+    std::vector<double> u(localsize, 0);
 
     cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
 
-    CALI_MARK_BEGIN("writer:loop");
+    CALI_MARK_BEGIN("writer:iterations");
 
     for (int i = 0; i < steps; i++) {
-#ifdef ENABLE_TIMERS
-      //MPI_Barrier(comm);
-      timer_total.start();
-      timer_compute.start();
-#endif
-
       /*Compute kernel can be
       added here if required*/
-
-#ifdef ENABLE_TIMERS
-      double time_compute = timer_compute.stop();
-      //MPI_Barrier(comm);
-      timer_write.start();
-#endif
-      writer.write(i + 1,u);
-
-#ifdef ENABLE_TIMERS
-      double time_write = timer_write.stop();
-      double time_step = timer_total.stop();
-      //MPI_Barrier(comm);
-
-      log << i << "\t" << time_step << "\t" << time_compute << "\t" << time_write << std::endl;
+      CALI_MARK_BEGIN("writer:write-time-outside-barrier");
+      MPI_Barrier(MPI_COMM_WORLD);
+      CALI_MARK_BEGIN("writer:write-time-inside-barrier");
+      writer.write(i + 1, u);
+      CALI_MARK_END("writer:write-time-inside-barrier");
+      MPI_Barrier(MPI_COMM_WORLD);
+      CALI_MARK_END("writer:write-time-outside-barrier");
       if(rank == 0)
-          std::cout << "Step: " << i + 1 << std::endl;
-#endif
+         std::cout << "Step = " << i + 1 << std::endl;
     }
     writer.close();
-    CALI_MARK_END("writer:loop");
-
-
-#ifdef ENABLE_TIMERS
-    log << "total\t" << timer_total.elapsed() << "\t" << timer_compute.elapsed()
-        << "\t" << timer_write.elapsed() << std::endl;
-
-    log.close();
-#endif
-
-  } catch (std::exception &e) {
+    CALI_MARK_END("writer:iterations");
+  }
+  catch (std::exception &e) {
     std::cout << "ERROR: ADIOS2 exception: " << e.what() << "\n";
     MPI_Abort(MPI_COMM_WORLD, -1);
   }

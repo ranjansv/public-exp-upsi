@@ -38,11 +38,11 @@ then
     
         for DATASIZE in $DATA_PER_RANK
         do
-            TOTAL_DATA_SIZE=`echo "scale=0; $DATASIZE * ($NR) * $STEPS" | bc`
-            if [ $TOTAL_DATA_SIZE != $PRESET_TOTAL_DATA_SIZE ]
-            then
-                continue
-            fi
+            #TOTAL_DATA_SIZE=`echo "scale=0; $DATASIZE * ($NR) * $STEPS" | bc`
+            #if [ $TOTAL_DATA_SIZE != $PRESET_TOTAL_DATA_SIZE ]
+            #then
+            #    continue
+            #fi
             OUTPUT_FILE="${RESULT_DIR}/csv/workflowtime-${NR}ranks-${DATASIZE}mb.csv"
             echo "io_method,$AGGREGATORS,None" > $OUTPUT_FILE
             sed -i 's/\s/,/g' $OUTPUT_FILE
@@ -62,6 +62,45 @@ then
                     do
                             WORKFLOW_TIME=`cat $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/workflow-time.log`
                             echo -n ",$WORKFLOW_TIME" >> $OUTPUT_FILE
+                    done
+                    echo -n "," >> $OUTPUT_FILE
+		fi
+                echo "" >> $OUTPUT_FILE
+            done
+        done
+    done
+
+    for NR in $PROCS
+    do
+        #Setup outfile for recording average total write time   
+        mkdir -p $RESULT_DIR/csv/ 
+    
+        for DATASIZE in $DATA_PER_RANK
+        do
+            #TOTAL_DATA_SIZE=`echo "scale=0; $DATASIZE * ($NR) * $STEPS" | bc`
+            #if [ $TOTAL_DATA_SIZE != $PRESET_TOTAL_DATA_SIZE ]
+            #then
+            #    continue
+            #fi
+            OUTPUT_FILE="${RESULT_DIR}/csv/avgwritetime-insidebarrier-${NR}ranks-${DATASIZE}mb.csv"
+            echo "io_method,$AGGREGATORS,None" > $OUTPUT_FILE
+            sed -i 's/\s/,/g' $OUTPUT_FILE
+            for IO_NAME in $ENGINE
+	    do
+	        echo -n "$IO_NAME" >> $OUTPUT_FILE
+		if [ $IO_NAME == "daos-array" ]
+		then
+                    for ADIOS_XML in $AGGREGATORS 
+                    do
+                        echo -n "," >> $OUTPUT_FILE
+		    done
+		    WRITE_TIME=`grep inside-barrier $RESULT_DIR/${NR}ranks/${DATASIZE}mb/daos-array/stdout-mpirun-writers.log|awk '{print $4}'`
+		    echo -n ",$WRITE_TIME" >> $OUTPUT_FILE
+		else
+                    for ADIOS_XML in $AGGREGATORS 
+                    do
+                            WRITE_TIME=`grep inside-barrier $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-writers.log|awk '{print $4}'`
+                            echo -n ",$WRITE_TIME" >> $OUTPUT_FILE
                     done
                     echo -n "," >> $OUTPUT_FILE
 		fi
