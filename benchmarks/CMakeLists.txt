@@ -35,6 +35,9 @@ target_link_libraries(writer PRIVATE adios2::cxx11_mpi MPI::MPI_C caliper)
 add_executable(reader reader.cpp)
 target_link_libraries(reader PRIVATE adios2::cxx11_mpi MPI::MPI_C caliper)
 
+add_executable(daos_array-writer-obj-per-rank daos_array-writer-obj-per-rank.c)
+target_link_libraries(daos_array-writer-obj-per-rank PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
+
 add_executable(daos_array-writer daos_array-writer.c)
 target_link_libraries(daos_array-writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
