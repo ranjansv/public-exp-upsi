@@ -183,12 +183,12 @@ typedef struct mesg_buffer {
   char mesg_text[100];
 } MesQ;
 
-void read_data(size_t arr_size_mb, int steps, int async) {
+void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_handle_t th;
   daos_array_iod_t iod;
-  daos_range_t rg;
+  daos_range_t *rg;
   d_sg_list_t sgl;
   d_iov_t iov;
   char *rbuf = NULL;
@@ -196,7 +196,7 @@ void read_data(size_t arr_size_mb, int steps, int async) {
   daos_event_t ev, *evp;
   int rc;
   int iter;
-  size_t num_elements;
+  size_t elements_per_rank;
   daos_size_t size;
   char *eptr;
 
@@ -257,19 +257,30 @@ void read_data(size_t arr_size_mb, int steps, int async) {
     printf("rank = %d, oid.lo = %lu, oid.hi = %lu\n", rank, oid.lo, oid.hi);
   }
 
-  num_elements = arr_size_mb * MB_in_bytes / procs;
-  D_ALLOC_ARRAY(rbuf, num_elements);
+  elements_per_rank = arr_size_mb * MB_in_bytes / procs;
+  D_ALLOC_ARRAY(rbuf, elements_per_rank);
   assert_non_null(rbuf);
 
   /** set array location */
-  iod.arr_nr = 1;
-  rg.rg_len = num_elements * sizeof(char) / cell_size;
-  rg.rg_idx = rank * rg.rg_len;
-  iod.arr_rgs = &rg;
+  iod.arr_nr = elements_per_rank/iosize_bytes;
+  rg = (daos_range_t *) malloc(iod.arr_nr * sizeof(daos_range_t));
+  daos_off_t start_index = rank * elements_per_rank * sizeof(char);
+  daos_size_t len = sizeof(char) * iosize_bytes;
+  for(iter = 0; iter < iod.arr_nr; iter++) { 
+     rg[iter].rg_len = len;
+     rg[iter].rg_idx = start_index + iter * iosize_bytes;
+  }
+  iod.arr_rgs = rg;
+
+  if(rank == 0) {
+    printf("arr_nr = %lu\n", iod.arr_nr);
+    printf("start_index = %lu\n", start_index);
+    printf("len = %lu\n", len);
+  }
 
   /** set memory location */
   sgl.sg_nr = 1;
-  d_iov_set(&iov, rbuf, num_elements * sizeof(char));
+  d_iov_set(&iov, rbuf, elements_per_rank * sizeof(char));
   sgl.sg_iovs = &iov;
 
   CALI_MARK_BEGIN("daos_array-reader:iterations");
@@ -346,7 +357,8 @@ int main(int argc, char **argv) {
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
   size_t arr_size_mb = atoi(argv[3]);
-  int steps = atoi(argv[4]);
+  size_t iosize_bytes = atoi(argv[4]);
+  int steps = atoi(argv[5]);
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -411,7 +423,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(arr_size_mb, steps);
-  read_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
+  read_data(arr_size_mb, iosize_bytes, steps, 0 /* Async I/O flag False*/);
 
   /** close container */
   daos_cont_close(coh, NULL);

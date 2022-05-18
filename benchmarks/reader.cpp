@@ -17,8 +17,7 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
   std::string filename = std::string(argv[2]);
-  size_t arr_size_mb = std::stoi(argv[3]);
-  int steps = std::stoi(argv[4]);
+  size_t iosize_bytes = std::stoi(argv[3]);
   int rank, comm_size, wrank;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
@@ -40,6 +39,8 @@ int main(int argc, char *argv[]) {
   int step;
   adios2::Variable<double> var_u_in;
   adios2::Variable<int> var_step_in;
+
+  size_t count = iosize_bytes/sizeof(double);
 
   // Open Engine
   adios2::Engine reader = reader_io.Open(filename, adios2::Mode::Read, comm);
@@ -77,19 +78,25 @@ int main(int argc, char *argv[]) {
 
     shape = var_u_in.Shape();
 
-    size_t count = shape[0] / comm_size;
-    size_t offset = count * rank;
+    size_t total_readcount = shape[0] / comm_size;
+    size_t begin_offset = total_readcount * rank;
+    size_t offset = begin_offset;
 
     if (rank == comm_size - 1)
-      count = shape[0] - count * (comm_size - 1);
+      total_readcount = shape[0] - total_readcount * (comm_size - 1);
 
     // Set selection
-    var_u_in.SetSelection(adios2::Box<adios2::Dims>({ offset }, { count }));
+    while ( offset < begin_offset + total_readcount ) {
+        var_u_in.SetSelection(adios2::Box<adios2::Dims>({ offset }, { count }));
+        offset += count;
+    }
 
     reader.Get<double>(var_u_in, u);
     reader.Get<int>(var_step_in, step);
 
+    CALI_MARK_BEGIN("reader:endstep");
     reader.EndStep();
+    CALI_MARK_END("reader:endstep");
     CALI_MARK_END("reader:inquire-n-endstep");
   }
   CALI_MARK_END("reader:loop");
