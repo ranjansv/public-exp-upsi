@@ -264,10 +264,10 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   /** set array location */
   iod.arr_nr = elements_per_rank/iosize_bytes;
   rg = (daos_range_t *) malloc(iod.arr_nr * sizeof(daos_range_t));
-  daos_off_t start_index = rank * elements_per_rank * sizeof(char);
-  daos_size_t len = sizeof(char) * iosize_bytes;
+  daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+  daos_size_t read_length = sizeof(char) * iosize_bytes;
   for(iter = 0; iter < iod.arr_nr; iter++) { 
-     rg[iter].rg_len = len;
+     rg[iter].rg_len = read_length;
      rg[iter].rg_idx = start_index + iter * iosize_bytes;
   }
   iod.arr_rgs = rg;
@@ -275,7 +275,7 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   if(rank == 0) {
     printf("arr_nr = %lu\n", iod.arr_nr);
     printf("start_index = %lu\n", start_index);
-    printf("len = %lu\n", len);
+    printf("read_length = %lu\n", read_length);
   }
 
   /** set memory location */

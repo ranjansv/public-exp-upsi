@@ -88,10 +88,10 @@ int main(int argc, char *argv[]) {
     // Set selection
     while ( offset < begin_offset + total_readcount ) {
         var_u_in.SetSelection(adios2::Box<adios2::Dims>({ offset }, { count }));
+        reader.Get<double>(var_u_in, u);
         offset += count;
     }
 
-    reader.Get<double>(var_u_in, u);
     reader.Get<int>(var_step_in, step);
 
     CALI_MARK_BEGIN("reader:endstep");
