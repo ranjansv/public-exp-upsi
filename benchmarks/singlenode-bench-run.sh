@@ -96,7 +96,7 @@ do
   	    echo "global array size: $GLOBAL_ARRAY_SIZE"
   
 
-	    IOSIZE=268435456
+	    IOSIZE=67108864
   
   
   	    if [ $BENCH_TYPE == "writer-reader" ]
@@ -173,7 +173,7 @@ do
 
 		      echo "Starting readers"
   	              START_TIME=$SECONDS
-                      ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,mpi-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $IOSIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                      ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $IOSIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
   	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
   	              echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
 

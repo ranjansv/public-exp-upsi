@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
 
   cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
   CALI_MARK_BEGIN("reader:loop");
-
+  int iter = 1;
   while (true) {
 
     // Begin step
@@ -91,6 +91,9 @@ int main(int argc, char *argv[]) {
         reader.Get<double>(var_u_in, u);
         offset += count;
     }
+    if(!rank) {
+    std::cout << "iter: " << iter << ", vec data addr: " << u.data() << ", vec size: " << u.size() << std::endl ;
+    }
 
     reader.Get<int>(var_step_in, step);
 
@@ -98,6 +101,8 @@ int main(int argc, char *argv[]) {
     reader.EndStep();
     CALI_MARK_END("reader:endstep");
     CALI_MARK_END("reader:inquire-n-endstep");
+
+    iter++;
   }
   CALI_MARK_END("reader:loop");
 
