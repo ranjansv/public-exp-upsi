@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
   adios2::Variable<double> var_u_in;
   adios2::Variable<int> var_step_in;
 
-  size_t count = iosize_bytes/sizeof(double);
+  size_t count = iosize_bytes / sizeof(double);
 
   // Open Engine
   adios2::Engine reader = reader_io.Open(filename, adios2::Mode::Read, comm);
@@ -86,14 +86,16 @@ int main(int argc, char *argv[]) {
       total_readcount = shape[0] - total_readcount * (comm_size - 1);
 
     // Set selection
-    while ( offset < begin_offset + total_readcount ) {
-        var_u_in.SetSelection(adios2::Box<adios2::Dims>({ offset }, { count }));
-        reader.Get<double>(var_u_in, u);
-        offset += count;
+    while (offset < begin_offset + total_readcount) {
+      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ offset }, { count }));
+      reader.Get<double>(var_u_in, u);
+      offset += count;
     }
-    if(!rank) {
-    std::cout << "iter: " << iter << ", vec data addr: " << u.data() << ", vec size: " << u.size() << std::endl ;
-    }
+    /*
+    if (!rank) {
+      std::cout << "iter: " << iter << ", vec data addr: " << u.data()
+                << ", vec size: " << u.size() << std::endl;
+    }*/
 
     reader.Get<int>(var_step_in, step);
 
