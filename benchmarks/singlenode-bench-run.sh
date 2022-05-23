@@ -37,7 +37,7 @@ cd ..
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 
-SCRIPT_NAME="bench-run.sh"
+SCRIPT_NAME="singlenode-bench-run.sh"
 cp ./$SCRIPT_NAME  $RESULT_DIR/
 
 
@@ -96,9 +96,6 @@ do
   	    echo "global array size: $GLOBAL_ARRAY_SIZE"
   
 
-	    IOSIZE=67108864
-  
-  
   	    if [ $BENCH_TYPE == "writer-reader" ]
   	    then
   	       if [ $ENG_TYPE == "daos-array" ]
@@ -123,7 +120,7 @@ do
 		   #read -n 1 -r -s -p $'Press enter to continue...\n'
 
   	           START_TIME=$SECONDS
-                     ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $IOSIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                     ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $READ_IO_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
   
@@ -171,9 +168,10 @@ do
 
 		      #read -n 1 -r -s -p $'Press enter to continue...\n'
 
-		      echo "Starting readers"
+		      echo "Starting readers with read io size(bytes): $READ_IO_SIZE"
   	              START_TIME=$SECONDS
-                      ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $IOSIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                      #ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                      ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
   	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
   	              echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
 
@@ -217,8 +215,8 @@ done
 
 echo "Destroying previous containers, if any "
 daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
-#echo "Generating CSV files"
-#./parse-result.sh $RESULT_DIR
+echo "Generating CSV files"
+./parse-result.sh $RESULT_DIR
 
 echo "CSV directory:"
 echo "$RESULT_DIR/csv"
