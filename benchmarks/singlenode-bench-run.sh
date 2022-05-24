@@ -96,8 +96,6 @@ do
   	    echo "global array size: $GLOBAL_ARRAY_SIZE"
   
 
-  	    if [ $BENCH_TYPE == "writer-reader" ]
-  	    then
   	       if [ $ENG_TYPE == "daos-array" ]
   	       then
   		    echo "Destroying previous containers, if any "
@@ -112,18 +110,28 @@ do
                    echo "New container UUID: $CONT_UUID"
 	           OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/"
 		   mkdir -p $OUTPUT_DIR
-  	           START_TIME=$SECONDS
-                     ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-  	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-  	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/writeworkflow-time.log
+  	           if [ $BENCH_TYPE == "writer-reader" ]
+  	           then
+  	               START_TIME=$SECONDS
+                         ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	               ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	               echo "$ELAPSED_TIME" > $OUTPUT_DIR/writeworkflow-time.log
 
-		   #read -n 1 -r -s -p $'Press enter to continue...\n'
+		       #read -n 1 -r -s -p $'Press enter to continue...\n'
 
-  	           START_TIME=$SECONDS
-                     ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $READ_IO_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-  	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-  	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
-  
+  	               START_TIME=$SECONDS
+                         ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $READ_IO_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	               ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	               echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
+                   elif [ $BENCH_TYPE == "workflow" ]
+		   then
+  	               START_TIME=$SECONDS
+                         ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &        
+                         ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $READ_IO_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	               ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	               echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+		   fi
+
   	       elif [ $ENG_TYPE == "daos-posix" ]
   	       then
   		   echo "Destroying previous containers, if any "
@@ -160,20 +168,31 @@ do
 
 		      echo "Running daos-posix workload"
 
-		      echo "Starting writers"
-  	              START_TIME=$SECONDS
-                      ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-  	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
-  	              echo "$ELAPSED_TIME" > $OUTPUT_DIR/writeworkflow-time.log
+		      if [ $BENCH_TYPE == "writer-reader" ]
+		      then
+		          echo "Starting writers"
+  	                  START_TIME=$SECONDS
+                          ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	                  ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	                  echo "$ELAPSED_TIME" > $OUTPUT_DIR/writeworkflow-time.log
 
-		      #read -n 1 -r -s -p $'Press enter to continue...\n'
+		          #read -n 1 -r -s -p $'Press enter to continue...\n'
 
-		      echo "Starting readers with read io size(bytes): $READ_IO_SIZE"
-  	              START_TIME=$SECONDS
-                      #ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-                      ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
-  	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
-  	              echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
+		          echo "Starting readers with read io size(bytes): $READ_IO_SIZE"
+  	                  START_TIME=$SECONDS
+                          #ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                          ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	                  ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	                  echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
+
+		      elif [ $BENCH_TYPE == "workflow" ]
+		      then
+  	                  START_TIME=$SECONDS
+                          ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &    
+                          ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	                  ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	                  echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+		      fi
 
   		      rm -rf $FILENAME/* &> /dev/null 
 
@@ -208,7 +227,7 @@ do
   		   rm -rf ./mnt/lustre/* &> /dev/null
 		   done
   	       fi
-  	    fi
+  	    
           done
       done
 done
