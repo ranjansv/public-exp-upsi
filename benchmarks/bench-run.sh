@@ -2,17 +2,19 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p flex			# Queue (partition) name
-#SBATCH -N 37                # Total # of nodes 
-#SBATCH -n 1036		# Total # of mpi tasks
+#SBATCH -p small                 # Queue (partition) name
+#SBATCH -N 2                # Total # of nodes 
+#SBATCH -n 56         # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 04:00:00        # Run time (hh:mm:ss)
+#SBATCH -t 00:10:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
 POOL_UUID=`dmg -i -o $daos_config pool list --verbose | tail -2|head -1|awk '{print $2}'`
 echo "POOL_UUID: $POOL_UUID"
 echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
+SLURM_JOB_CPUS_PER_NODE=28
+echo "SLURM_JOB_CPUS_PER_NODE: $SLURM_JOB_CPUS_PER_NODE"
 
 CONFIG_FILE=$1
 
@@ -50,6 +52,9 @@ SCRIPT_NAME="bench-run.sh"
 cp ./$SCRIPT_NAME  $RESULT_DIR/
 
 
+export I_MPI_PIN=0
+export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
+export TACC_MPI_GETMODE=impi_hydra
 
 is_daos_agent_running=`pgrep daos_agent`
 echo $is_daos_agent_running
@@ -65,13 +70,22 @@ fi
 echo "Waiting for agent to initialize..."
 sleep 60
 
-RANKS_PER_NODE=28
 echo "Staring tests"
 
 
-  for NR in $PROCS
-  do
-      writer_nodes=$((($NR + $RANKS_PER_NODE - 1)/$RANKS_PER_NODE))
+for NR in $PROCS
+do
+      writer_nodes=$((($NR + $SLURM_JOB_CPUS_PER_NODE- 1)/$SLURM_JOB_CPUS_PER_NODE)) 
+      offset=$(( $writer_nodes * $SLURM_JOB_CPUS_PER_NODE ))
+
+      NR_READERS=`echo "scale=0; $NR/$READ_WRITE_RATIO" | bc`
+
+
+      if [ $BENCH_TYPE == "workflow" ]
+      then
+          TOTAL_RANKS=`echo "scale=0; $NR + $NR_READERS" | bc`
+          echo "First reader offset: $offset" 
+      fi
       for IO_NAME in $ENGINE
       do
   	#Parse IO_NAME for engine and storage type in case of DAOS
@@ -98,11 +112,7 @@ echo "Staring tests"
   	    GLOBAL_ARRAY_SIZE=`echo "scale=0; $DATASIZE * ($NR)" | bc`
   	    echo "global array size: $GLOBAL_ARRAY_SIZE"
   
-  	    export I_MPI_PIN=0
-  
-  
-  	    if [ $BENCH_TYPE == "writer" ]
-  	    then
+
   	       if [ $ENG_TYPE == "daos-array" ]
   	       then
   		    echo "Destroying previous containers, if any "
@@ -117,16 +127,28 @@ echo "Staring tests"
                    echo "New container UUID: $CONT_UUID"
 	           OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/"
 		   mkdir -p $OUTPUT_DIR
-		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
-		   export TACC_MPI_GETMODE=impi_hydra
-  	           START_TIME=$SECONDS
-                     ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-                     #ibrun -o 0 -n $NR   env CALI_CONFIG="hatchet-sample-profile(output=$OUTPUT_DIR/daos_array-writer-${NR}ranks-${DATASIZE}mb.json)"  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-  	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
-		   unset I_MPI_ROOT
-		   unset TACC_MPI_GETMODE
-  
-  	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+  	           if [ $BENCH_TYPE == "writer-reader" ]
+  	           then
+  	               START_TIME=$SECONDS
+                         ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	               ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	               echo "$ELAPSED_TIME" > $OUTPUT_DIR/writeworkflow-time.log
+
+		       #read -n 1 -r -s -p $'Press enter to continue...\n'
+
+  	               START_TIME=$SECONDS
+                         ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $READ_IO_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	               ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	               echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
+                   elif [ $BENCH_TYPE == "workflow" ]
+		   then
+  	               START_TIME=$SECONDS
+                         ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-writer $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &        
+                         ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive  build/daos_array-reader $POOL_UUID $CONT_UUID $GLOBAL_ARRAY_SIZE $READ_IO_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	               ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	               echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+		   fi
+
   	       elif [ $ENG_TYPE == "daos-posix" ]
   	       then
   		   echo "Destroying previous containers, if any "
@@ -134,12 +156,14 @@ echo "Staring tests"
   		   CONT_UUID=`daos cont create --pool=$POOL_UUID --type=POSIX|grep -i 'created container'|awk '{print $4}'`
                    echo "New POSIX container UUID: $CONT_UUID"
 
+		   echo ""
 		   echo "Cleaning up stale daos-posix mounts, if any"
   		   export TACC_TASKS_PER_NODE=1
   		   ibrun -np $SLURM_JOB_NUM_NODES fusermount3 -u $MOUNTPOINT
   		   unset TACC_TASKS_PER_NODE
-		   echo "Mounting daos-posix using dfuse"
 
+		   echo ""
+		   echo "Mounting daos-posix using dfuse"
   		   export TACC_TASKS_PER_NODE=1
   		   ibrun -np $SLURM_JOB_NUM_NODES launch_dfuse.sh $MOUNTPOINT $POOL_UUID $CONT_UUID &
   		   unset TACC_TASKS_PER_NODE
@@ -160,18 +184,35 @@ echo "Staring tests"
                       cp adios-config/${ADIOS_XML}.xml $OUTPUT_DIR/
 
 		      echo "Running daos-posix workload"
-		      export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
-		      export TACC_MPI_GETMODE=impi_hydra
-  
-  	              START_TIME=$SECONDS
-                      ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
-  	              ELAPSED_TIME=$(($SECONDS - $START_TIME))
+
+		      if [ $BENCH_TYPE == "writer-reader" ]
+		      then
+		          echo "Starting writers"
+  	                  START_TIME=$SECONDS
+                          ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
+  	                  ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	                  echo "$ELAPSED_TIME" > $OUTPUT_DIR/writeworkflow-time.log
+
+		          #read -n 1 -r -s -p $'Press enter to continue...\n'
+
+		          echo "Starting readers with read io size(bytes): $READ_IO_SIZE"
+  	                  START_TIME=$SECONDS
+                          #ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+                          ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	                  ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	                  echo "$ELAPSED_TIME" > $OUTPUT_DIR/readworkflow-time.log
+
+		      elif [ $BENCH_TYPE == "workflow" ]
+		      then
+  	                  START_TIME=$SECONDS
+                          ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log &    
+                          ibrun -o $offset -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+  	                  ELAPSED_TIME=$(($SECONDS - $START_TIME))
+  	                  echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
+		      fi
 
   		      rm -rf $FILENAME/* &> /dev/null 
-		      unset I_MPI_ROOT
-		      unset TACC_MPI_GETMODE
 
-  	              echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 		   done
 		   echo "Unmounting daos-posix"
   		   export TACC_TASKS_PER_NODE=1
@@ -192,14 +233,10 @@ echo "Staring tests"
                    mkdir -p $OUTPUT_DIR
   		   rm -rf ./mnt/lustre/* &> /dev/null
 
-		   export I_MPI_ROOT=/opt/intel/compilers_and_libraries_2020.4.304/linux/mpi
-		   export TACC_MPI_GETMODE=impi_hydra
   	           START_TIME=$SECONDS
                      ibrun -o 0 -n $NR  numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>> $OUTPUT_DIR/stdout-mpirun-writers.log
   	           ELAPSED_TIME=$(($SECONDS - $START_TIME))
 
-		   unset I_MPI_ROOT
-		   unset TACC_MPI_GETMODE
   	           echo "$ELAPSED_TIME" > $OUTPUT_DIR/workflow-time.log
 
   		   echo "Listing Lustre files"
@@ -207,12 +244,13 @@ echo "Staring tests"
   		   rm -rf ./mnt/lustre/* &> /dev/null
 		   done
   	       fi
-  	    fi
+  	    
           done
       done
 done
 
-./daos-destroy-cont.sh
+echo "Destroying previous containers, if any "
+daos pool list-cont --pool=$POOL_UUID |sed -e '1,2d'|awk '{print $1}'|xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
 echo "Generating CSV files"
 ./parse-result.sh $RESULT_DIR
 
