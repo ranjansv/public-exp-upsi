@@ -201,16 +201,20 @@ fi
 	    do
 		if [ $IO_NAME == "daos-array" ]
 		then
-		    READ_TIME=`grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/daos-array/stdout-mpirun-readers-iosize-$IOSIZE.log|awk '{printf "%.2f", $4}'`
+		    READ_TIME=`grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/daos-array/stdout-mpirun-readers-iosize-$IOSIZE.log|awk '{printf "%.f", $4}'`
 		    echo -n ",$READ_TIME" >> $OUTPUT_FILE
 		elif [ $IO_NAME == "adios+daos-posix" ]
 		then
 		     ADIOS_XML=$AGGREGATORS
-                     READ_TIME=`grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-readers-iosize-$IOSIZE.log|awk '{printf "%.2f", $4}'`
+                     READ_TIME=`grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-readers-iosize-$IOSIZE.log|awk '{printf "%.f", $4}'`
+                     echo -n ",$READ_TIME" >> $OUTPUT_FILE
+		elif [ $IO_NAME == "ior+daos-posix" ]
+		then
+		     READ_TIME=`grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-readers-iosize-$IOSIZE.log|head -$STEPS|awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.f", sum}'`
                      echo -n ",$READ_TIME" >> $OUTPUT_FILE
 		elif [ $IO_NAME == "ior+dfs" ]
 		then
-		     READ_TIME=`grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers-iosize-$IOSIZE.log|head -$STEPS|awk 'BEGIN{sum = 0} {sum += $10} END {print sum}'`
+		     READ_TIME=`grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers-iosize-$IOSIZE.log|head -$STEPS|awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.f", sum}'`
                      echo -n ",$READ_TIME" >> $OUTPUT_FILE
 		fi
             done
