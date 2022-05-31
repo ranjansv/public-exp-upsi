@@ -310,10 +310,8 @@ done
 echo "Destroying previous containers, if any "
 daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
 
-#echo "Generating CSV files"
-#./parse-result.sh $RESULT_DIR
-#echo "CSV directory:"
-#echo "$RESULT_DIR/csv"
+echo "Generating CSV files"
+./parse-result.sh $RESULT_DIR
 
 echo "List of stdout files with error"
 find $RESULT_DIR/ -iname 'stdout*.log' | xargs ls -1t | tac | xargs grep -il 'error'

@@ -149,7 +149,7 @@ done
 #Compare Readtime
 for NR in $PROCS; do
 	for DATASIZE in $DATA_PER_RANK; do
-		OUTPUT_FILE="${RESULT_DIR}/csv/comparereadtime-${NR}ranks-${DATASIZE}mb-readsize.csv"
+		OUTPUT_FILE="${RESULT_DIR}/csv/comparereadtime-${NR}ranks-${DATASIZE}mb.csv"
 		echo -n "io_size" >$OUTPUT_FILE
 		echo ",$ENGINE" >>$OUTPUT_FILE
 		sed -i 's/\s/,/g' $OUTPUT_FILE
