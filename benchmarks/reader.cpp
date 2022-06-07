@@ -17,7 +17,8 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
   std::string filename = std::string(argv[2]);
-  size_t iosize_bytes = std::stoi(argv[3]);
+  size_t iosize_bytes = strtol(argv[3], NULL, 10);
+  //size_t iosize_bytes = std::stoi(argv[3]);
   int rank, comm_size, wrank;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
@@ -91,11 +92,10 @@ int main(int argc, char *argv[]) {
       reader.Get<double>(var_u_in, u);
       offset += count;
     }
-    /*
     if (!rank) {
       std::cout << "iter: " << iter << ", vec data addr: " << u.data()
                 << ", vec size: " << u.size() << std::endl;
-    }*/
+    }
 
     reader.Get<int>(var_step_in, step);
 

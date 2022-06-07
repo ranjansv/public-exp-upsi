@@ -185,7 +185,7 @@ for NR in $PROCS; do
 						for IOSIZE in $READ_IO_SIZE; do
 							echo "Starting readers with read io size(bytes): $IOSIZE"
 							START_TIME=$SECONDS
-							#ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/reader posix $FILENAME $READ_IO_SIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
+							#ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/reader posix $FILENAME $IOSIZE &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 							ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/reader posix $FILENAME $IOSIZE &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$IOSIZE.log
 							ELAPSED_TIME=$(($SECONDS - $START_TIME))
 							echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-$IOSIZE-time.log
@@ -230,7 +230,7 @@ for NR in $PROCS; do
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					echo "Starting IOR writers"
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_PATH ior -a POSIX -b ${DATASIZE}mb -t ${DATASIZE}mb -v -W -w -k -o $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH ior -a POSIX -b ${DATASIZE}mb -t ${DATASIZE}mb -v -W -w -k -o $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
@@ -314,7 +314,7 @@ echo "Generating CSV files"
 ./parse-result.sh $RESULT_DIR
 
 echo "List of stdout files with error"
-find $RESULT_DIR/ -iname 'stdout*.log' | xargs ls -1t | tac | xargs grep -il 'error'
+find $RESULT_DIR/ -iname 'stdout*.log' | xargs ls -1t | tac | xargs grep -ilE 'error|bad'
 
 find $RESULT_DIR/ -iname 'avg*.csv' | xargs tail
 if [ $BENCH_TYPE == "workflow" ]; then

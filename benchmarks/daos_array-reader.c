@@ -356,9 +356,9 @@ int main(int argc, char **argv) {
   int rc;
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
-  size_t arr_size_mb = atoi(argv[3]);
-  size_t iosize_bytes = atoi(argv[4]);
-  int steps = atoi(argv[5]);
+  size_t arr_size_mb = strtol(argv[3],NULL,10);
+  size_t iosize_bytes = strtol(argv[4],NULL,10);
+  int steps = strtol(argv[5],NULL,10);
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
