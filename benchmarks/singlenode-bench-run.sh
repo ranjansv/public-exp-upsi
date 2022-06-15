@@ -1,4 +1,4 @@
-POOL_UUID=$(dmg -i -o $daos_config pool list --verbose | tail -2 | head -1 | awk '{print $2}')
+POOL_UUID=$(dmg -i -o $daos_config pool list --verbose | grep ranjan | awk '{print $2}')
 echo "POOL_UUID: $POOL_UUID"
 echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
 SLURM_JOB_CPUS_PER_NODE=28
@@ -316,7 +316,7 @@ echo "Generating CSV files"
 echo "List of stdout files with error"
 find $RESULT_DIR/ -iname 'stdout*.log' | xargs ls -1t | tac | xargs grep -ilE 'error|bad'
 
-find $RESULT_DIR/ -iname 'avg*.csv' | xargs tail
+find $RESULT_DIR/ -iname 'compareread*.csv' | xargs tail
 if [ $BENCH_TYPE == "workflow" ]; then
 	echo ""
 	echo "Workflow times"

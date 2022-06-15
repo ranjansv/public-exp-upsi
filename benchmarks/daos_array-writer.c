@@ -206,7 +206,9 @@ void write_data(size_t arr_size_mb, int steps, int async) {
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
-  static daos_size_t chunk_size = 2097152;
+  //static daos_size_t chunk_size = 67108864;
+  static daos_size_t chunk_size = 1048576;
+  //static daos_size_t chunk_size = 2097152;
   // static daos_size_t chunk_size = 16;
 
   //MPI_Barrier(MPI_COMM_WORLD);

@@ -208,7 +208,9 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
-  static daos_size_t chunk_size = 2097152;
+  //static daos_size_t chunk_size = 67108864;
+  static daos_size_t chunk_size = 1048576;
+  //static daos_size_t chunk_size = 2097152;
   // static daos_size_t chunk_size = 16;
   daos_obj_id_t oids[NUM_OBJS];
   uint32_t oids_nr;
