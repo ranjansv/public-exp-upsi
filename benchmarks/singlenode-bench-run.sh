@@ -270,7 +270,7 @@ for NR in $PROCS; do
 					for IOSIZE in $READ_IO_SIZE; do
 						echo "Starting IOR readers with read io size(bytes): $IOSIZE"
 						START_TIME=$SECONDS
-						ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 ior -a DFS -b ${TOTAL_READ_DATA}mb -t $IOSIZE -v -r -i $STEPS -k -o $FILENAME --dfs.pool $POOL_UUID --dfs.cont $CONT_UUID &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$IOSIZE.log
+						ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 ior -a DFS -b ${TOTAL_READ_DATA}mb -t $IOSIZE -v -z -r -i $STEPS -k -o $FILENAME --dfs.pool $POOL_UUID --dfs.cont $CONT_UUID &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$IOSIZE.log
 						ELAPSED_TIME=$(($SECONDS - $START_TIME))
 						echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-$IOSIZE-time.log
 					done

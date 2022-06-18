@@ -291,7 +291,7 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   for(iter = 0; iter < iod.arr_nr; iter++)
       arr_offsets[iter] = iter;
 
-  //shuffle(arr_offsets,iod.arr_nr);
+  shuffle(arr_offsets,iod.arr_nr);
 
   for(iter = 0; iter < iod.arr_nr; iter++) { 
      rg[iter].rg_len = read_length;
