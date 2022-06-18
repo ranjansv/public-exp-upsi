@@ -183,6 +183,21 @@ typedef struct mesg_buffer {
   char mesg_text[100];
 } MesQ;
 
+void shuffle(int *array, size_t n)
+{
+    if (n > 1) 
+    {
+        size_t i;
+        for (i = 0; i < n - 1; i++) 
+        {
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          int t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
+}
+
 void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
@@ -268,9 +283,19 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   rg = (daos_range_t *) malloc(iod.arr_nr * sizeof(daos_range_t));
   daos_off_t start_index = rank * elements_per_rank / sizeof(char);
   daos_size_t read_length = sizeof(char) * iosize_bytes;
+
+  //Array of offsets to choose at random. This array will track offset chosen
+  //so that we don't pick them again
+  int arr_offsets[iod.arr_nr];
+
+  for(iter = 0; iter < iod.arr_nr; iter++)
+      arr_offsets[iter] = iter;
+
+  //shuffle(arr_offsets,iod.arr_nr);
+
   for(iter = 0; iter < iod.arr_nr; iter++) { 
      rg[iter].rg_len = read_length;
-     rg[iter].rg_idx = start_index + iter * iosize_bytes;
+     rg[iter].rg_idx = start_index + arr_offsets[iter] * iosize_bytes;
   }
   iod.arr_rgs = rg;
 
