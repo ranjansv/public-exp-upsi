@@ -198,7 +198,7 @@ void shuffle(int *array, size_t n)
     }
 }
 
-void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
+void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async, int flag_random_read) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_handle_t th;
@@ -291,6 +291,7 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async) {
   for(iter = 0; iter < iod.arr_nr; iter++)
       arr_offsets[iter] = iter;
 
+  if(flag_random_read == 1)
   shuffle(arr_offsets,iod.arr_nr);
 
   for(iter = 0; iter < iod.arr_nr; iter++) { 
@@ -386,6 +387,12 @@ int main(int argc, char **argv) {
   size_t arr_size_mb = strtol(argv[3],NULL,10);
   size_t iosize_bytes = strtol(argv[4],NULL,10);
   int steps = strtol(argv[5],NULL,10);
+  int flag_random_read;
+
+  if(strcmp(argv[6],"random") == 0)
+      flag_random_read = 1;
+  else
+     flag_random_read = 0;
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -450,7 +457,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(arr_size_mb, steps);
-  read_data(arr_size_mb, iosize_bytes, steps, 0 /* Async I/O flag False*/);
+  read_data(arr_size_mb, iosize_bytes, steps, 0 /* Async I/O flag False*/, flag_random_read);
 
   /** close container */
   daos_cont_close(coh, NULL);

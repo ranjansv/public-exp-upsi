@@ -12,14 +12,36 @@
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
+#include <stdlib.h>
+
+void shuffle(std::vector<int>& array, size_t n)
+{
+    if (n > 1)
+    {   
+        size_t i;
+        for (i = 0; i < n - 1; i++)
+        { 
+          size_t j = i + rand() / (RAND_MAX / (n - i) + 1);
+          int t = array[j];
+          array[j] = array[i];
+          array[i] = t;
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
   std::string filename = std::string(argv[2]);
   size_t iosize_bytes = strtol(argv[3], NULL, 10);
+  std::string read_pattern = std::string(argv[4]);
   //size_t iosize_bytes = std::stoi(argv[3]);
   int rank, comm_size, wrank;
+
+  bool flag_random_read;
+
+
+  std::vector<int> arr_offsets;
 
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
 
@@ -48,6 +70,12 @@ int main(int argc, char *argv[]) {
 
   // Perform Reads
   std::vector<std::size_t> shape;
+
+  if(read_pattern == "random")
+      flag_random_read = true;
+  else
+      flag_random_read = false;
+
 
   cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
   CALI_MARK_BEGIN("reader:loop");
@@ -86,11 +114,23 @@ int main(int argc, char *argv[]) {
     if (rank == comm_size - 1)
       total_readcount = shape[0] - total_readcount * (comm_size - 1);
 
+    if(iter == 1) {
+        arr_offsets.resize(total_readcount);
+
+        for(int i = 0;i < total_readcount; i++)
+            arr_offsets[i] = i;
+
+        if(flag_random_read == true)
+        shuffle(arr_offsets, total_readcount);
+    }
+
     // Set selection
+    int j = 0;
     while (offset < begin_offset + total_readcount) {
-      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ offset }, { count }));
+      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + count * arr_offsets[j] }, { count }));
       reader.Get<double>(var_u_in, u);
       offset += count;
+      j++;
     }
     if (!rank) {
       std::cout << "iter: " << iter << ", vec data addr: " << u.data()
