@@ -115,19 +115,19 @@ int main(int argc, char *argv[]) {
       total_readcount = shape[0] - total_readcount * (comm_size - 1);
 
     if(iter == 1) {
-        arr_offsets.resize(total_readcount);
+        arr_offsets.resize(total_readcount/count);
 
-        for(int i = 0;i < total_readcount; i++)
+        for(int i = 0;i < arr_offsets.size(); i++)
             arr_offsets[i] = i;
 
         if(flag_random_read == true)
-        shuffle(arr_offsets, total_readcount);
+        shuffle(arr_offsets, arr_offsets.size());
     }
 
     // Set selection
     int j = 0;
     while (offset < begin_offset + total_readcount) {
-      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + count * arr_offsets[j] }, { count }));
+      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + arr_offsets[j] * count }, { count }));
       reader.Get<char>(var_u_in, u);
       offset += count;
       j++;
