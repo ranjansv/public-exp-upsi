@@ -21,11 +21,11 @@
 Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb)
     : io(io) {
 
-  global_array_size = arr_size_mb * MB_in_bytes / sizeof(double);
+  global_array_size = arr_size_mb * MB_in_bytes / sizeof(char);
   local_size = global_array_size / procs;
   offset = rank * local_size;
 
-  var_array = io.DefineVariable<double>("U", { global_array_size }, { offset },
+  var_array = io.DefineVariable<char>("U", { global_array_size }, { offset },
                                         { local_size });
 
   var_step = io.DefineVariable<int>("step");
@@ -37,11 +37,11 @@ void Writer::open(const std::string &fname) {
 
 int Writer::getlocalsize() { return local_size; }
 
-void Writer::write(int step, std::vector<double> &u) {
+void Writer::write(int step, std::vector<char> &u) {
 
   writer.BeginStep();
   writer.Put<int>(var_step, &step);
-  writer.Put<double>(var_array, u.data());
+  writer.Put<char>(var_array, u.data());
   writer.EndStep();
 }
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 
     writer.open(filename);
 
-    std::vector<double> u(localsize, 0);
+    std::vector<char> u(localsize, 0);
 
     cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
 

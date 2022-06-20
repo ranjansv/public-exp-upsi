@@ -58,12 +58,12 @@ int main(int argc, char *argv[]) {
   adios2::IO reader_io = ad.DeclareIO(engine_type);
 
   // Declare variables
-  std::vector<double> u;
+  std::vector<char> u;
   int step;
-  adios2::Variable<double> var_u_in;
+  adios2::Variable<char> var_u_in;
   adios2::Variable<int> var_step_in;
 
-  size_t count = iosize_bytes / sizeof(double);
+  size_t count = iosize_bytes / sizeof(char);
 
   // Open Engine
   adios2::Engine reader = reader_io.Open(filename, adios2::Mode::Read, comm);
@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     // timesteps
 
     // Inquire variable
-    var_u_in = reader_io.InquireVariable<double>("U");
+    var_u_in = reader_io.InquireVariable<char>("U");
     var_step_in = reader_io.InquireVariable<int>("step");
 
     shape = var_u_in.Shape();
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     int j = 0;
     while (offset < begin_offset + total_readcount) {
       var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + count * arr_offsets[j] }, { count }));
-      reader.Get<double>(var_u_in, u);
+      reader.Get<char>(var_u_in, u);
       offset += count;
       j++;
     }
