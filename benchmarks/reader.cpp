@@ -63,7 +63,6 @@ int main(int argc, char *argv[]) {
   adios2::Variable<char> var_u_in;
   adios2::Variable<int> var_step_in;
 
-  size_t count = iosize_bytes / sizeof(char);
 
   // Open Engine
   adios2::Engine reader = reader_io.Open(filename, adios2::Mode::Read, comm);
@@ -107,15 +106,15 @@ int main(int argc, char *argv[]) {
 
     shape = var_u_in.Shape();
 
-    size_t total_readcount = shape[0] / comm_size;
-    size_t begin_offset = total_readcount * rank;
+    size_t elements_per_rank = shape[0] / comm_size;
+    size_t begin_offset = elements_per_rank * rank;
     size_t offset = begin_offset;
 
     if (rank == comm_size - 1)
-      total_readcount = shape[0] - total_readcount * (comm_size - 1);
+      elements_per_rank = shape[0] - elements_per_rank * (comm_size - 1);
 
     if(iter == 1) {
-        arr_offsets.resize(total_readcount/count);
+        arr_offsets.resize(elements_per_rank/iosize_bytes);
 
         for(int i = 0;i < arr_offsets.size(); i++)
             arr_offsets[i] = i;
@@ -126,15 +125,11 @@ int main(int argc, char *argv[]) {
 
     // Set selection
     int j = 0;
-    while (offset < begin_offset + total_readcount) {
-      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + arr_offsets[j] * count }, { count }));
+    while (offset < begin_offset + elements_per_rank) {
+      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + arr_offsets[j] * iosize_bytes }, { iosize_bytes }));
       reader.Get<char>(var_u_in, u);
-      offset += count;
+      offset += iosize_bytes;
       j++;
-    }
-    if (!rank) {
-      std::cout << "iter: " << iter << ", vec data addr: " << u.data()
-                << ", vec size: " << u.size() << std::endl;
     }
 
     reader.Get<int>(var_step_in, step);
@@ -143,6 +138,11 @@ int main(int argc, char *argv[]) {
     reader.EndStep();
     CALI_MARK_END("reader:endstep");
     CALI_MARK_END("reader:inquire-n-endstep");
+
+    if (!rank) {
+      std::cout << "iter: " << iter << ", vec data addr: " << (void *)u.data()
+                << ", vec size: " << u.size() << std::endl;
+    }
 
     iter++;
   }
