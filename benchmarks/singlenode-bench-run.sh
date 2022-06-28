@@ -230,7 +230,7 @@ for NR in $PROCS; do
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					echo "Starting IOR writers"
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH ior -a POSIX -b ${DATASIZE}mb -t ${DATASIZE}mb -v -W -w -k -o $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH ior -a POSIX -b ${DATASIZE}mb -t ${DATASIZE}mb -v -i $STEPS -w -k -o $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
@@ -269,7 +269,7 @@ for NR in $PROCS; do
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					echo "Starting IOR writers"
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 ior -a DFS -b ${DATASIZE}mb -t ${DATASIZE}mb -v -W -w -k -o $FILENAME --dfs.pool $POOL_UUID --dfs.cont $CONT_UUID &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 ior -a DFS -b ${DATASIZE}mb -t ${DATASIZE}mb -v -w -k -i $STEPS -o $FILENAME --dfs.pool $POOL_UUID --dfs.cont $CONT_UUID &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 

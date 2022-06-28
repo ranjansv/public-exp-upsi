@@ -140,10 +140,10 @@ for NR in $PROCS; do
                                         WRITE_TIME=$(grep 'write-time-outside-barrier' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "ior+daos-posix" ]; then
-                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-writers.log | head -1 | awk '{printf "%.2f", $8}')
+                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.2f", sum}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "ior+dfs" ]; then
-                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-writers.log | head -1 | awk '{printf "%.2f", $8}') 
+                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.2f", sum}') 
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 fi
                         done
