@@ -2,11 +2,11 @@
 #SBATCH -J upsi-bench           # Job name
 #SBATCH -o upsi-bench.o%j       # Name of stdout output file
 #SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p small                 # Queue (partition) name
-#SBATCH -N 2                # Total # of nodes 
-#SBATCH -n 56         # Total # of mpi tasks
+#SBATCH -p flex			# Queue (partition) name
+#SBATCH -N 19                # Total # of nodes 
+#SBATCH -n 532         # Total # of mpi tasks
 #SBATCH --ntasks-per-node=28
-#SBATCH -t 00:10:00        # Run time (hh:mm:ss)
+#SBATCH -t 04:00:00        # Run time (hh:mm:ss)
 #SBATCH --mail-type=all    # Send email at begin and end of job
 #SBATCH --mail-user=ranjansv@gmail.com
 
@@ -267,4 +267,5 @@ echo "Generating CSV files"
 
 echo "List of stdout files with error"
 find $RESULT_DIR/ -iname 'stdout*.log' | xargs ls -1t | tac | xargs grep --color='auto' -ilE 'error|termination|fail'
+ls -1t upsi*|head -2|xargs -L 1 -I {} sh -c "mv {} results/latest"
 
