@@ -151,6 +151,6 @@ for NR in $PROCS; do
         done
 done
 
-mkdir export-${RESULT_DIR}
+mkdir -p export-${RESULT_DIR}
 cp $RESULT_DIR/config.sh export-${RESULT_DIR}/
 cp -r $RESULT_DIR/csv export-${RESULT_DIR}/
