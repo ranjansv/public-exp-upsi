@@ -111,10 +111,10 @@ for NR in $PROCS; do
 					READ_TIME=$(grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "ior+daos-posix" ]; then
-					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-readers-iosize-$IOSIZE.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.2f", sum}')
+					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-readers-iosize-$IOSIZE.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "ior+dfs" ]; then
-					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers-iosize-$IOSIZE.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.2f", sum}')
+					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers-iosize-$IOSIZE.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				fi
 			done
@@ -140,10 +140,10 @@ for NR in $PROCS; do
                                         WRITE_TIME=$(grep 'write-time-outside-barrier' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "ior+daos-posix" ]; then
-                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.2f", sum}')
+                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "ior+dfs" ]; then
-                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $10} END {printf "%.2f", sum}') 
+                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}') 
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 fi
                         done

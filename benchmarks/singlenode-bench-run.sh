@@ -336,4 +336,8 @@ if [ $BENCH_TYPE == "workflow" ]; then
 	echo "Workflow times"
 	find $RESULT_DIR/ -iname 'workflow*.csv' | xargs tail
 fi
+
+mkdir export-${RESULT_DIR}
+cp $RESULT_DIR/config.sh export-${RESULT_DIR}/
+cp -r $RESULT_DIR/csv export-${RESULT_DIR}/
 #source ./daos-list-cont.sh
