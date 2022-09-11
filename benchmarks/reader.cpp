@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
 
 
   cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
-  CALI_MARK_BEGIN("reader:loop");
+  CALI_MARK_BEGIN("reader:iterations");
   int iter = 1;
   while (true) {
 
@@ -146,7 +146,7 @@ int main(int argc, char *argv[]) {
 
     iter++;
   }
-  CALI_MARK_END("reader:loop");
+  CALI_MARK_END("reader:iterations");
 
   // cleanup
   reader.Close();
