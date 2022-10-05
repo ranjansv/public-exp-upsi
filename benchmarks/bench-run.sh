@@ -1,15 +1,3 @@
-#!/bin/bash
-#SBATCH -J upsi-bench           # Job name
-#SBATCH -o upsi-bench.o%j       # Name of stdout output file
-#SBATCH -e upsi-bench.e%j       # Name of stderr error file
-#SBATCH -p small                 # Queue (partition) name
-#SBATCH -N 2                # Total # of nodes 
-#SBATCH -n 56         # Total # of mpi tasks
-#SBATCH --ntasks-per-node=28
-#SBATCH -t 00:10:00        # Run time (hh:mm:ss)
-#SBATCH --mail-type=all    # Send email at begin and end of job
-#SBATCH --mail-user=ranjansv@gmail.com
-
 POOL_UUID=$(dmg -i -o $daos_config pool list --verbose | grep ranjan | awk '{print $2}')
 echo "POOL_UUID: $POOL_UUID"
 echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
