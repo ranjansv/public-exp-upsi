@@ -25,10 +25,15 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb)
   local_size = global_array_size / procs;
   offset = rank * local_size;
 
-  var_array = io.DefineVariable<char>("U", { global_array_size }, { offset },
-                                        { local_size });
+  block_size = 33554432;
+  num_blocks = local_size / block_size;
+
+  var_array = io.DefineVariable<char>("U", { global_array_size },
+                                      adios2::Dims(), adios2::Dims());
 
   var_step = io.DefineVariable<int>("step");
+
+  my_rank = rank;
 }
 
 void Writer::open(const std::string &fname) {
@@ -41,7 +46,14 @@ void Writer::write(int step, std::vector<char> &u) {
 
   writer.BeginStep();
   writer.Put<int>(var_step, &step);
-  writer.Put<char>(var_array, u.data());
+  size_t curr_offset = my_rank * block_size;
+  for (int i = 0; i < num_blocks; i++) {
+    var_array.SetSelection(
+        adios2::Box<adios2::Dims>({ curr_offset }, { block_size }));
+    writer.Put<char>(var_array, u.data());
+    curr_offset = curr_offset + 14 * block_size;
+    curr_offset = curr_offset % global_array_size;
+  }
   writer.EndStep();
 }
 
@@ -96,8 +108,8 @@ int main(int argc, char *argv[]) {
       CALI_MARK_END("writer:write-time-inside-barrier");
       MPI_Barrier(MPI_COMM_WORLD);
       CALI_MARK_END("writer:write-time-outside-barrier");
-      if(rank == 0)
-         std::cout << "Step = " << i + 1 << std::endl;
+      if (rank == 0)
+        std::cout << "Step = " << i + 1 << std::endl;
     }
     writer.close();
     CALI_MARK_END("writer:iterations");

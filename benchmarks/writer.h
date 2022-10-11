@@ -9,6 +9,10 @@ class Writer {
   size_t global_array_size;
   size_t offset;
   size_t local_size;
+  size_t block_size;
+  size_t num_blocks;
+
+  int my_rank;
 
 public:
   Writer(adios2::IO, int, int, size_t);
