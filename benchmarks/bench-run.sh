@@ -36,7 +36,7 @@ cd ..
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
 
-SCRIPT_NAME="singlenode-bench-run.sh"
+SCRIPT_NAME="bench-run.sh"
 cp ./$SCRIPT_NAME $RESULT_DIR/
 
 export I_MPI_PIN=0
@@ -230,7 +230,7 @@ for NR in $PROCS; do
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					echo "Starting IOR writers"
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH ior -a POSIX -b ${DATASIZE}mb -t ${DATASIZE}mb -v -W -w -k -o $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env LD_PRELOAD=$PRELOAD_LIBPATH ior -a POSIX -b ${DATASIZE}mb -t ${DATASIZE}mb -v -i $STEPS -W -w -k -o $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
@@ -269,7 +269,7 @@ for NR in $PROCS; do
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					echo "Starting IOR writers"
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 ior -a DFS -b ${DATASIZE}mb -t ${DATASIZE}mb -v -W -w -k -o $FILENAME --dfs.pool $POOL_UUID --dfs.cont $CONT_UUID &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 ior -a DFS -b ${DATASIZE}mb -t ${DATASIZE}mb -v -i $STEPS -W -w -k -o $FILENAME --dfs.pool $POOL_UUID --dfs.cont $CONT_UUID &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
@@ -294,27 +294,6 @@ for NR in $PROCS; do
 				fi
 				echo "Cleaning up daos-posix container"
 				daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
-			elif [ $ENG_TYPE == "lustre-posix" ]; then
-				for ADIOS_XML in $AGGREGATORS; do
-					echo ""
-					echo "Aggregator: $ADIOS_XML"
-					cp adios-config/${ADIOS_XML}.xml adios2.xml
-					OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/"
-
-					#Save ADIOS config for each aggregator
-					mkdir -p $OUTPUT_DIR
-					rm -rf ./mnt/lustre/* &>/dev/null
-
-					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log
-					ELAPSED_TIME=$(($SECONDS - $START_TIME))
-
-					echo "$ELAPSED_TIME" >$OUTPUT_DIR/workflow-time.log
-
-					echo "Listing Lustre files"
-					ls -lh ./mnt/lustre/
-					rm -rf ./mnt/lustre/* &>/dev/null
-				done
 			fi
 
 		done
