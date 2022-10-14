@@ -18,14 +18,15 @@
 #define ENABLE_TIMERS
 #undef ENABLE_TIMERS
 
-Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb)
+Writer::Writer(adios2::IO io, int rank, int procs, size_t arr_size_mb, int write_size)
     : io(io) {
 
   global_array_size = arr_size_mb * MB_in_bytes / sizeof(char);
   local_size = global_array_size / procs;
   offset = rank * local_size;
 
-  block_size = 33554432;
+  //block_size = 33554432;
+  block_size = write_size;
   num_blocks = local_size / block_size;
 
   var_array = io.DefineVariable<char>("U", { global_array_size },
@@ -66,6 +67,7 @@ int main(int argc, char *argv[]) {
   std::string filename = std::string(argv[2]);
   size_t arr_size_mb = std::stoi(argv[3]);
   int steps = std::stoi(argv[4]);
+  int write_size = std::stoi(argv[5]);
 
   int rank, procs, wrank;
   MPI_Comm_rank(MPI_COMM_WORLD, &wrank);
@@ -86,7 +88,7 @@ int main(int argc, char *argv[]) {
   try {
     adios2::ADIOS adios("./adios2.xml", comm);
     adios2::IO io_handle = adios.DeclareIO(engine_type);
-    Writer writer(io_handle, rank, procs, arr_size_mb);
+    Writer writer(io_handle, rank, procs, arr_size_mb,write_size);
 
     int localsize = writer.getlocalsize();
 

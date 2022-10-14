@@ -176,7 +176,7 @@ for NR in $PROCS; do
 					if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
 						START_TIME=$SECONDS
-						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/writer posix $FILENAME $GLOBAL_ARRAY_SIZE $STEPS $PUT_SIZE &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 						ELAPSED_TIME=$(($SECONDS - $START_TIME))
 						echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
