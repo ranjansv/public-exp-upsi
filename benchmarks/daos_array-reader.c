@@ -105,13 +105,13 @@ static inline void ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
   }
 }
 
-void array(size_t arr_size_mb, int steps) {
+void array(size_t datasize_mb, int steps) {
   daos_handle_t oh;
   struct io_req *reqs;
   int rc;
   int iter;
 
-  size_t data_per_rank = arr_size_mb * MB_in_bytes / procs;
+  size_t data_per_rank = datasize_mb * MB_in_bytes / procs;
 
   /** allocate and initialize I/O requests */
   D_ALLOC_ARRAY(data, data_per_rank);
@@ -198,7 +198,7 @@ void shuffle(int *array, size_t n)
     }
 }
 
-void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async, int flag_random_read) {
+void read_data(size_t datasize_mb, size_t iosize_bytes, int steps, int async, int flag_random_read) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_handle_t th;
@@ -244,7 +244,7 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async, in
     memset(&oids[iter], 0, sizeof(daos_obj_id_t));
 
   if (rank == 0) {
-    printf("arr_size_mb = %d\n", arr_size_mb);
+    printf("datasize_mb = %d\n", datasize_mb);
 
     while(oid_part_count != 2) {
       usleep(10000);
@@ -274,7 +274,7 @@ void read_data(size_t arr_size_mb, size_t iosize_bytes, int steps, int async, in
     printf("rank = %d, oid.lo = %lu, oid.hi = %lu\n", rank, oid.lo, oid.hi);
   }
 
-  elements_per_rank = arr_size_mb * MB_in_bytes / procs;
+  elements_per_rank = datasize_mb * MB_in_bytes;
   D_ALLOC_ARRAY(rbuf, elements_per_rank);
   assert_non_null(rbuf);
 
@@ -384,7 +384,7 @@ int main(int argc, char **argv) {
   int rc;
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
-  size_t arr_size_mb = strtol(argv[3],NULL,10);
+  size_t datasize_mb = strtol(argv[3],NULL,10);
   size_t iosize_bytes = strtol(argv[4],NULL,10);
   int steps = strtol(argv[5],NULL,10);
   int flag_random_read;
@@ -456,8 +456,8 @@ int main(int argc, char **argv) {
   CALI_MARK_END("daos_array-reader:cont_connect");
 
   /** the other tasks write the array */
-  // array(arr_size_mb, steps);
-  read_data(arr_size_mb, iosize_bytes, steps, 0 /* Async I/O flag False*/, flag_random_read);
+  // array(datasize_mb, steps);
+  read_data(datasize_mb, iosize_bytes, steps, 0 /* Async I/O flag False*/, flag_random_read);
 
   /** close container */
   daos_cont_close(coh, NULL);

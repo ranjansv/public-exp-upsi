@@ -104,39 +104,6 @@ static inline void ioreqs_init(struct io_req *reqs, size_t data_per_rank) {
   }
 }
 
-void array(size_t arr_size_mb, int steps) {
-  daos_handle_t oh;
-  struct io_req *reqs;
-  int rc;
-  int iter;
-
-  size_t data_per_rank = arr_size_mb * MB_in_bytes / procs;
-
-  /** allocate and initialize I/O requests */
-  D_ALLOC_ARRAY(data, data_per_rank);
-  D_ALLOC_ARRAY(reqs, MAX_IOREQS);
-  ASSERT(reqs != NULL, "malloc of reqs failed");
-  ioreqs_init(reqs, data_per_rank);
-
-  /** Transactional overwrite of the array at each iteration */
-  for (iter = 0; iter < steps; iter++) {
-
-    MPI_Barrier(comm);
-    if (rank == 0) {
-      epoch++;
-      daos_cont_create_snap(coh, &epoch, NULL, NULL);
-      ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
-    }
-    MPI_Barrier(comm);
-  }
-
-  if (rank == 0)
-    print_message("rank 0 array()..completed\n");
-
-  D_FREE(reqs);
-  D_FREE(data);
-}
-
 static void array_oh_share(daos_handle_t *oh) {
   d_iov_t ghdl = { NULL, 0, 0 };
   int rc;
@@ -176,17 +143,12 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-// structure for message queue
-typedef struct mesg_buffer {
-  long mesg_type;
-  char mesg_text[100];
-} MesQ;
 
-void write_data(size_t arr_size_mb, int steps, int async) {
+void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
-  daos_range_t rg;
+  daos_range_t *rg;
   d_sg_list_t sgl;
   d_iov_t iov;
   char *wbuf = NULL;
@@ -194,26 +156,16 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   daos_event_t ev, *evp;
   int rc;
   int iter;
-  size_t num_elements;
+  size_t elements_per_rank;
   daos_size_t size;
 
-  MesQ send_q;
-  key_t key;
-  int msgid;
   FILE *fp;
   char buf[100];
   int fd;
 
-  /* Temporary assignment */
   daos_size_t cell_size = 1;
-  //static daos_size_t chunk_size = 67108864;
   static daos_size_t chunk_size = 1048576;
-  //static daos_size_t chunk_size = 2097152;
-  // static daos_size_t chunk_size = 16;
 
-  //MPI_Barrier(MPI_COMM_WORLD);
-  /** create the array on rank 0 and share the oh. */
- 
   CALI_MARK_BEGIN("daos_array-writer:oid-gen-n-share"); 
   if (rank == 0) {
     //oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0, 0);
@@ -245,25 +197,36 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   CALI_MARK_END("daos_array-writer:oid-gen-n-share"); 
 
   /** Allocate and set buffer */
-  // num_elements = arr_size_mb ;
+  // elements_per_rank = datasize_mb ;
   if (rank == 0)
-    printf("arr_size_mb = %d\n", arr_size_mb);
-  num_elements = arr_size_mb * MB_in_bytes / procs;
-  D_ALLOC_ARRAY(wbuf, num_elements);
+    printf("datasize_mb = %d\n", datasize_mb);
+  elements_per_rank = datasize_mb * MB_in_bytes;
+  D_ALLOC_ARRAY(wbuf, elements_per_rank);
   assert_non_null(wbuf);
 
-  for (i = 0; i < num_elements; i++)
+  for (i = 0; i < elements_per_rank; i++)
     wbuf[i] = i + 1;
 
   /** set array location */
-  iod.arr_nr = 1;
-  rg.rg_len = num_elements * sizeof(char) / cell_size;
-  rg.rg_idx = rank * rg.rg_len;
-  iod.arr_rgs = &rg;
+  iod.arr_nr = elements_per_rank/put_size;
+  rg = (daos_range_t *) malloc(iod.arr_nr * sizeof(daos_range_t));
+  daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+  daos_size_t write_length = sizeof(char) * put_size;
+
+  int arr_offsets[iod.arr_nr];
+
+  for(iter = 0; iter < iod.arr_nr; iter++)
+      arr_offsets[iter] = iter;
+
+  for(iter = 0; iter < iod.arr_nr; iter++) {
+     rg[iter].rg_len = write_length;
+     rg[iter].rg_idx = start_index + arr_offsets[iter] * put_size;
+  }
+  iod.arr_rgs = rg;
 
   /** set memory location */
   sgl.sg_nr = 1;
-  d_iov_set(&iov, wbuf, num_elements * sizeof(char));
+  d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
   sgl.sg_iovs = &iov;
 
   daos_handle_t th;
@@ -278,31 +241,15 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   CALI_MARK_BEGIN("daos_array-writer:iterations");
 
   for (iter = 0; iter < steps; iter++) {
-    /** Write */
-    // if (async) {
-    //  rc = daos_event_init(&ev, eq, NULL);
-    //  assert_rc_equal(rc, 0);
-    //}
-    // rc = daos_tx_open(coh, &th, 0, NULL);
-    // assert_rc_equal(rc, 0);
-    // rc = daos_array_write(oh, th, &iod, &sgl, async ? &ev : NULL);
-    CALI_MARK_BEGIN("daos_array-writer:write-time-outside-barrier");
-    MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_BEGIN("daos_array-writer:write-time-inside-barrier");
+    CALI_MARK_BEGIN("daos_array-writer:write-time");
     rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
-    CALI_MARK_END("daos_array-writer:write-time-inside-barrier");
+    CALI_MARK_END("daos_array-writer:write-time");
+
     MPI_Barrier(MPI_COMM_WORLD);
-    CALI_MARK_END("daos_array-writer:write-time-outside-barrier");
-    // rc = daos_tx_commit(th, NULL);
-    // assert_rc_equal(rc, 0);
-    // rc = daos_tx_close(th, NULL);
-    // assert_rc_equal(rc, 0);
 
     CALI_MARK_BEGIN("daos_array-writer:snapshot-time");
     if (rank == 0) {
-      // sprintf(snapshot_name, "snapshot-", iter + 1);
-      // rc = daos_cont_create_snap(coh, &epoch, snapshot_name, NULL);
       rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
 
       printf("daos_cont_create_snap, rc = %d\n", rc);
@@ -345,8 +292,9 @@ int main(int argc, char **argv) {
   int rc;
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
-  size_t arr_size_mb = strtol(argv[3],NULL,10);
-  int steps = strtol(argv[4],NULL,10);
+  size_t datasize_mb = strtol(argv[3],NULL,10);
+  int put_size = strtol(argv[4],NULL,10);
+  int steps = strtol(argv[5],NULL,10);
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -374,9 +322,6 @@ int main(int argc, char **argv) {
 
   CALI_MARK_BEGIN("daos_array-writer:pool_connect");
   if (rank == 0) {
-    /** create a test pool and container for this test */
-    // pool_create();
-
     /** connect to the just created DAOS pool */
     rc = daos_pool_connect(pool_uuid, DSS_PSETID,
                            // DAOS_PC_EX ,
@@ -392,13 +337,6 @@ int main(int argc, char **argv) {
  
   CALI_MARK_BEGIN("daos_array-writer:cont_connect");
   if (rank == 0) {
-    /** generate uuid for container */
-    // uuid_generate(co_uuid);
-    /** create container */
-    // rc = daos_cont_create(poh, co_uuid, NULL /* properties */,
-    //                      NULL /* event */);
-    // ASSERT(rc == 0, "container create failed with %d", rc);
-
     /** open container */
     rc = daos_cont_open(poh, co_uuid, DAOS_COO_RW, &coh, NULL, NULL);
     ASSERT(rc == 0, "container open failed with %d", rc);
@@ -409,8 +347,7 @@ int main(int argc, char **argv) {
   CALI_MARK_END("daos_array-writer:cont_connect");
 
   /** the other tasks write the array */
-  // array(arr_size_mb, steps);
-  write_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
+  write_daos_array_per_adios_obj(datasize_mb, put_size, steps, 0 /* Async I/O flag False*/);
 
   /** close container */
   daos_cont_close(coh, NULL);
