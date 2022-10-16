@@ -10,7 +10,6 @@
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
 
-#include "timer.hpp"
 #include "adios-writer.h"
 
 #define MB_in_bytes 1048576

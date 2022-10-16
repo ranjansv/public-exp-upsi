@@ -8,7 +8,6 @@
 #include <adios2.h>
 #include <mpi.h>
 
-#include "timer.hpp"
 
 #include <caliper/cali.h>
 #include <caliper/cali-manager.h>
