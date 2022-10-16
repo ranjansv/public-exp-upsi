@@ -111,7 +111,7 @@ void array(size_t datasize_mb, int steps) {
   int rc;
   int iter;
 
-  size_t data_per_rank = datasize_mb * MB_in_bytes / procs;
+  size_t data_per_rank = datasize_mb * MB_in_bytes;
 
   /** allocate and initialize I/O requests */
   D_ALLOC_ARRAY(data, data_per_rank);

@@ -21,6 +21,7 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb, int write
     : io(io) {
 
   local_size = datasize_mb * MB_in_bytes / sizeof(char);
+  global_array_size = local_size * procs;
   offset = rank * local_size;
 
   //put_size = 33554432;

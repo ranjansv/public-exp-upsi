@@ -34,7 +34,6 @@ int main(int argc, char *argv[]) {
   std::string filename = std::string(argv[2]);
   size_t iosize_bytes = strtol(argv[3], NULL, 10);
   std::string read_pattern = std::string(argv[4]);
-  //size_t iosize_bytes = std::stoi(argv[3]);
   int rank, comm_size, wrank;
 
   bool flag_random_read;
@@ -109,6 +108,12 @@ int main(int argc, char *argv[]) {
     size_t begin_offset = elements_per_rank * rank;
     size_t offset = begin_offset;
 
+/*
+    if(rank == 0) {
+        std::cout << "elements_per_rank: " << elements_per_rank << std::endl; 
+        std::cout << "offset: " << offset << std::endl; 
+    }
+*/
     if (rank == comm_size - 1)
       elements_per_rank = shape[0] - elements_per_rank * (comm_size - 1);
 

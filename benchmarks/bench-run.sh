@@ -185,7 +185,6 @@ for NR in $PROCS; do
 						for IOSIZE in $READ_IO_SIZE; do
 							echo "Starting readers with read io size(bytes): $IOSIZE"
 							START_TIME=$SECONDS
-							#ibrun -o 0 -n $NR_READERS  numactl --cpunodebind=0 --preferred=0  strace build/adios-reader posix $FILENAME $IOSIZE $READ_PATTERN &>> $OUTPUT_DIR/stdout-mpirun-readers.log
 							ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-reader posix $FILENAME $IOSIZE $READ_PATTERN &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$IOSIZE.log
 							ELAPSED_TIME=$(($SECONDS - $START_TIME))
 							echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-$IOSIZE-time.log
@@ -309,7 +308,14 @@ echo "Generating CSV files"
 echo "List of stdout files with error"
 find $RESULT_DIR/ -iname 'stdout*.log' | xargs ls -1t | tac | xargs grep --color='auto' -ilE 'error|termination|fail'
 
+echo ""
+echo "WRITE TIME"
+find $RESULT_DIR/ -iname 'comparewrite*.csv' | xargs tail
+echo ""
+echo ""
+echo "READ TIME"
 find $RESULT_DIR/ -iname 'compareread*.csv' | xargs tail
+
 if [ $BENCH_TYPE == "workflow" ]; then
 	echo ""
 	echo "Workflow times"
