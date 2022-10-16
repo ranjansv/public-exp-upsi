@@ -9,7 +9,7 @@ class Writer {
   size_t global_array_size;
   size_t offset;
   size_t local_size;
-  size_t block_size;
+  size_t put_size;
   size_t num_blocks;
 
   int my_rank;

@@ -11,7 +11,7 @@
 #include <caliper/cali-manager.h>
 
 #include "timer.hpp"
-#include "writer.h"
+#include "adios-writer.h"
 
 #define MB_in_bytes 1048576
 
@@ -24,9 +24,9 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb, int write
   local_size = datasize_mb * MB_in_bytes / sizeof(char);
   offset = rank * local_size;
 
-  //block_size = 33554432;
-  block_size = write_size;
-  num_blocks = local_size / block_size;
+  //put_size = 33554432;
+  put_size = write_size;
+  num_blocks = local_size / put_size;
 
   var_array = io.DefineVariable<char>("U", { global_array_size },
                                       adios2::Dims(), adios2::Dims());
@@ -46,12 +46,12 @@ void Writer::write(int step, std::vector<char> &u) {
 
   writer.BeginStep();
   writer.Put<int>(var_step, &step);
-  size_t curr_offset = my_rank * block_size;
+  size_t curr_offset = my_rank * put_size;
   for (int i = 0; i < num_blocks; i++) {
     var_array.SetSelection(
-        adios2::Box<adios2::Dims>({ curr_offset }, { block_size }));
+        adios2::Box<adios2::Dims>({ curr_offset }, { put_size }));
     writer.Put<char>(var_array, u.data());
-    curr_offset = curr_offset + 14 * block_size;
+    curr_offset = curr_offset + 14 * put_size;
     curr_offset = curr_offset % global_array_size;
   }
   writer.EndStep();
@@ -102,13 +102,10 @@ int main(int argc, char *argv[]) {
     for (int i = 0; i < steps; i++) {
       /*Compute kernel can be
       added here if required*/
-      CALI_MARK_BEGIN("writer:write-time-outside-barrier");
-      MPI_Barrier(MPI_COMM_WORLD);
-      CALI_MARK_BEGIN("writer:write-time-inside-barrier");
+      CALI_MARK_BEGIN("writer:write-time");
       writer.write(i + 1, u);
-      CALI_MARK_END("writer:write-time-inside-barrier");
+      CALI_MARK_END("writer:write-time");
       MPI_Barrier(MPI_COMM_WORLD);
-      CALI_MARK_END("writer:write-time-outside-barrier");
       if (rank == 0)
         std::cout << "Step = " << i + 1 << std::endl;
     }
