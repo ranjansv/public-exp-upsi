@@ -139,7 +139,7 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t arr_size_mb, int steps, int async) {
+void write_data(size_t datasize_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -151,7 +151,7 @@ void write_data(size_t arr_size_mb, int steps, int async) {
   daos_event_t ev;
   int rc;
   int iter;
-  size_t num_elements;
+  size_t elements_per_rank;
   daos_size_t size;
 
   /* Temporary assignment */
@@ -162,26 +162,26 @@ void write_data(size_t arr_size_mb, int steps, int async) {
 
  
   /** Allocate and set buffer */
-  // num_elements = arr_size_mb ;
+  // elements_per_rank = datasize_mb ;
   if (rank == 0)
-    printf("arr_size_mb = %d\n", arr_size_mb);
-  num_elements = arr_size_mb * MB_in_bytes / procs;
-  D_ALLOC_ARRAY(wbuf, num_elements);
+    printf("datasize_mb = %d\n", datasize_mb);
+  elements_per_rank = datasize_mb * MB_in_bytes;
+  D_ALLOC_ARRAY(wbuf, elements_per_rank);
   assert_non_null(wbuf);
 
-  for (i = 0; i < num_elements; i++)
+  for (i = 0; i < elements_per_rank; i++)
     wbuf[i] = i + 1;
 
   /** set array location */
   iod.arr_nr = 1;
-  rg.rg_len = num_elements * sizeof(char) / cell_size;
+  rg.rg_len = elements_per_rank * sizeof(char) / cell_size;
   rg.rg_idx = 0;
   //rg.rg_idx = rank * rg.rg_len;
   iod.arr_rgs = &rg;
 
   /** set memory location */
   sgl.sg_nr = 1;
-  d_iov_set(&iov, wbuf, num_elements * sizeof(char));
+  d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
   sgl.sg_iovs = &iov;
 
   CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:iterations");
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
   int rc;
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
-  size_t arr_size_mb = atoi(argv[3]);
+  size_t datasize_mb = atoi(argv[3]);
   int steps = atoi(argv[4]);
 
   rc = gethostname(node, sizeof(node));
@@ -271,8 +271,8 @@ int main(int argc, char **argv) {
   CALI_MARK_END("daos_array-writer-obj-per-rank:cont_connect");
 
   /** the other tasks write the array */
-  // array(arr_size_mb, steps);
-  write_data(arr_size_mb, steps, 0 /* Async I/O flag False*/);
+  // array(datasize_mb, steps);
+  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/);
 
   /** close container */
   MPI_Barrier(MPI_COMM_WORLD);
