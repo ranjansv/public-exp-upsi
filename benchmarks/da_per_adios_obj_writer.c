@@ -23,7 +23,10 @@ int wrank;
 int procs;
 char node[128] = "unknown";
 
-enum Pattern {Strided= 1, Sequence = 0}; 
+enum Pattern {
+  Strided = 1,
+  Sequence = 0
+};
 
 /* MPI communicator for writers */
 MPI_Comm comm;
@@ -145,7 +148,7 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
+void write_data(size_t datasize_mb, int put_size, int steps,
                                     int async, int pattern_flag) {
   daos_obj_id_t oid;
   daos_handle_t oh;
@@ -231,11 +234,11 @@ void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
     int arr_offsets[iod.arr_nr];
 
     for (iter = 0; iter < iod.arr_nr; iter++) {
-      if(pattern_flag == Sequence)
-      arr_offsets[iter] = iter;
+      if (pattern_flag == Sequence)
+        arr_offsets[iter] = iter;
       else
-      arr_offsets[iter] = (iter + 14) % iod.arr_nr;
-     
+        arr_offsets[iter] = (iter + 14) % iod.arr_nr;
+
       rg[iter].rg_len = write_length;
       rg[iter].rg_idx = start_index + arr_offsets[iter] * put_size;
     }
@@ -303,10 +306,10 @@ int main(int argc, char **argv) {
   char *pattern = argv[6];
   int pattern_flag = 0;
 
-  if(strcmp(pattern,"sequential") == 0)
-  pattern_flag = 0;
-else 
-pattern_flag = 1;
+  if (strcmp(pattern, "sequential") == 0)
+    pattern_flag = 0;
+  else
+    pattern_flag = 1;
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -359,7 +362,7 @@ pattern_flag = 1;
   CALI_MARK_END("daos_array-writer:cont_connect");
 
   /** the other tasks write the array */
-  write_daos_array_per_adios_obj(datasize_mb, put_size, steps,
+  write_data(datasize_mb, put_size, steps,
                                  0 /* Async I/O flag False*/, pattern_flag);
 
   /** close container */

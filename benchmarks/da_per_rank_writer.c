@@ -141,7 +141,7 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t datasize_mb, int steps, int async, int pattern_flag) {
+void write_data(size_t datasize_mb, int steps, int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -242,11 +242,6 @@ int main(int argc, char **argv) {
   size_t datasize_mb = atoi(argv[3]);
   int steps = atoi(argv[4]);
   char *pattern = argv[5];
-  int pattern_flag;
-
-  if(strcmp(pattern,"sequential") == 0)
-   pattern_flag = Sequence;
-  else
   
 
   rc = gethostname(node, sizeof(node));
@@ -311,7 +306,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(datasize_mb, steps);
-  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/, pattern_flag);
+  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/);
 
   /** close container */
   MPI_Barrier(MPI_COMM_WORLD);
