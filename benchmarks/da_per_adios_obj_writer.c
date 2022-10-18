@@ -143,8 +143,8 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-
-void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps, int async) {
+void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
+                                    int async) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -166,9 +166,10 @@ void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = 1048576;
 
-  CALI_MARK_BEGIN("daos_array-writer:oid-gen-n-share"); 
+  CALI_MARK_BEGIN("daos_array-writer:oid-gen-n-share");
   if (rank == 0) {
-    //oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0, 0);
+    // oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0,
+    // 0);
     oid.hi = 0;
     oid.lo = 3;
     daos_array_generate_oid(coh, &oid, true, 0, 0, 0);
@@ -191,10 +192,10 @@ void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
     fprintf(fp, "%d", 2);
     fclose(fp);
 
-    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi); 
+    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
   }
   array_oh_share(&oh);
-  CALI_MARK_END("daos_array-writer:oid-gen-n-share"); 
+  CALI_MARK_END("daos_array-writer:oid-gen-n-share");
 
   /** Allocate and set buffer */
   // elements_per_rank = datasize_mb ;
@@ -206,28 +207,6 @@ void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
 
   for (i = 0; i < elements_per_rank; i++)
     wbuf[i] = i + 1;
-
-  /** set array location */
-  iod.arr_nr = elements_per_rank/put_size;
-  rg = (daos_range_t *) malloc(iod.arr_nr * sizeof(daos_range_t));
-  daos_off_t start_index = rank * elements_per_rank / sizeof(char);
-  daos_size_t write_length = sizeof(char) * put_size;
-
-  int arr_offsets[iod.arr_nr];
-
-  for(iter = 0; iter < iod.arr_nr; iter++)
-      arr_offsets[iter] = iter;
-
-  for(iter = 0; iter < iod.arr_nr; iter++) {
-     rg[iter].rg_len = write_length;
-     rg[iter].rg_idx = start_index + arr_offsets[iter] * put_size;
-  }
-  iod.arr_rgs = rg;
-
-  /** set memory location */
-  sgl.sg_nr = 1;
-  d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
-  sgl.sg_iovs = &iov;
 
   daos_handle_t th;
   char snapshot_name[50];
@@ -241,12 +220,33 @@ void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
   CALI_MARK_BEGIN("daos_array-writer:iterations");
 
   for (iter = 0; iter < steps; iter++) {
+    /** set array location */
+    iod.arr_nr = elements_per_rank / put_size;
+    rg = (daos_range_t *)malloc(iod.arr_nr * sizeof(daos_range_t));
+    daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+    daos_size_t write_length = sizeof(char) * put_size;
+
+    int arr_offsets[iod.arr_nr];
+
+    for (iter = 0; iter < iod.arr_nr; iter++) {
+      arr_offsets[iter] = iter;
+      rg[iter].rg_len = write_length;
+      rg[iter].rg_idx = start_index + arr_offsets[iter] * put_size;
+    }
+    iod.arr_rgs = rg;
+
+    /** set memory location */
+    sgl.sg_nr = 1;
+    d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
+    sgl.sg_iovs = &iov;
+
     CALI_MARK_BEGIN("daos_array-writer:write-time");
     rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
     CALI_MARK_END("daos_array-writer:write-time");
 
     MPI_Barrier(MPI_COMM_WORLD);
+    free(rg);
 
     CALI_MARK_BEGIN("daos_array-writer:snapshot-time");
     if (rank == 0) {
@@ -256,13 +256,12 @@ void write_daos_array_per_adios_obj(size_t datasize_mb, int put_size, int steps,
       printf("epoch = %lu\n", epoch);
       ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
 
-
       sprintf(buf, "./share/container-snap-%d.txt", iter);
       fp = fopen(buf, "w");
       fprintf(fp, "%lu", epoch);
       fclose(fp);
 
-      fp = fopen("./share/snapshot_count.txt","w");
+      fp = fopen("./share/snapshot_count.txt", "w");
       fd = fileno(fp);
       if (flock(fd, LOCK_EX) == -1)
         exit(1);
@@ -292,9 +291,10 @@ int main(int argc, char **argv) {
   int rc;
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
-  size_t datasize_mb = strtol(argv[3],NULL,10);
-  int put_size = strtol(argv[4],NULL,10);
-  int steps = strtol(argv[5],NULL,10);
+  size_t datasize_mb = strtol(argv[3], NULL, 10);
+  int put_size = strtol(argv[4], NULL, 10);
+  int steps = strtol(argv[5], NULL, 10);
+  char *pattern = argv[6];
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -334,7 +334,7 @@ int main(int argc, char **argv) {
   /** share pool handle with peer tasks */
   handle_share(&poh, HANDLE_POOL, rank, poh, 1);
   CALI_MARK_END("daos_array-writer:pool_connect");
- 
+
   CALI_MARK_BEGIN("daos_array-writer:cont_connect");
   if (rank == 0) {
     /** open container */
@@ -347,7 +347,8 @@ int main(int argc, char **argv) {
   CALI_MARK_END("daos_array-writer:cont_connect");
 
   /** the other tasks write the array */
-  write_daos_array_per_adios_obj(datasize_mb, put_size, steps, 0 /* Async I/O flag False*/);
+  write_daos_array_per_adios_obj(datasize_mb, put_size, steps,
+                                 0 /* Async I/O flag False*/);
 
   /** close container */
   daos_cont_close(coh, NULL);

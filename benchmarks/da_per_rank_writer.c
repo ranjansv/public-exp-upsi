@@ -153,14 +153,16 @@ void write_data(size_t datasize_mb, int steps, int async) {
   int iter;
   size_t elements_per_rank;
   daos_size_t size;
+  FILE *fp;
+  int fd;
+  char buf[100];
 
   /* Temporary assignment */
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = MB_in_bytes;
-  //static daos_size_t chunk_size = 2097152;
+  // static daos_size_t chunk_size = 2097152;
   // static daos_size_t chunk_size = 16;
 
- 
   /** Allocate and set buffer */
   // elements_per_rank = datasize_mb ;
   if (rank == 0)
@@ -172,31 +174,59 @@ void write_data(size_t datasize_mb, int steps, int async) {
   for (i = 0; i < elements_per_rank; i++)
     wbuf[i] = i + 1;
 
-  /** set array location */
-  iod.arr_nr = 1;
-  rg.rg_len = elements_per_rank * sizeof(char) / cell_size;
-  rg.rg_idx = 0;
-  //rg.rg_idx = rank * rg.rg_len;
-  iod.arr_rgs = &rg;
-
-  /** set memory location */
-  sgl.sg_nr = 1;
-  d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
-  sgl.sg_iovs = &iov;
+  // Create DAOS array object per writer
+  oid.hi = 0;
+  oid.lo = rank;
+  daos_array_generate_oid(coh, &oid, true, 0, 0, 0);
+  rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size, chunk_size, &oh,
+                         NULL);
+  assert_rc_equal(rc, 0);
 
   CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:iterations");
 
   for (iter = 0; iter < steps; iter++) {
+
     CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:write-time");
-    oid.hi = 0;
-    oid.lo = rank * steps + iter;
-    daos_array_generate_oid(coh, &oid, true, 0, 0, 0);
-    rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size, chunk_size, &oh,
-                           NULL);
-    assert_rc_equal(rc, 0);
+    /** set array location */
+    iod.arr_nr = 1;
+    rg.rg_len = elements_per_rank * sizeof(char) / cell_size;
+    rg.rg_idx = 0;
+    // rg.rg_idx = rank * rg.rg_len;
+    iod.arr_rgs = &rg;
+
+    /** set memory location */
+    sgl.sg_nr = 1;
+    d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
+    sgl.sg_iovs = &iov;
+
     rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
     CALI_MARK_END("daos_array-writer-obj-per-rank:write-time");
+
+    MPI_Barrier(MPI_COMM_WORLD);
+
+    CALI_MARK_BEGIN("daos_array-writer:snapshot-time");
+    if (rank == 0) {
+      rc = daos_cont_create_snap(coh, &epoch, NULL, NULL);
+
+      printf("daos_cont_create_snap, rc = %d\n", rc);
+      printf("epoch = %lu\n", epoch);
+      ASSERT(rc == 0, "daos_cont_create_snap failed with %d", rc);
+
+      sprintf(buf, "./share/container-snap-%d.txt", iter);
+      fp = fopen(buf, "w");
+      fprintf(fp, "%lu", epoch);
+      fclose(fp);
+
+      fp = fopen("./share/snapshot_count.txt", "w");
+      fd = fileno(fp);
+      if (flock(fd, LOCK_EX) == -1)
+        exit(1);
+      fprintf(fp, "%d", iter + 1);
+      fclose(fp);
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    CALI_MARK_END("daos_array-writer:snapshot-time");
   }
   CALI_MARK_END("daos_array-writer-obj-per-rank:iterations");
 
@@ -251,7 +281,7 @@ int main(int argc, char **argv) {
   /** share pool handle with peer tasks */
   handle_share(&poh, HANDLE_POOL, rank, poh, 1);
   CALI_MARK_END("daos_array-writer-obj-per-rank:pool_connect");
- 
+
   CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:cont_connect");
   if (rank == 0) {
     /** generate uuid for container */
