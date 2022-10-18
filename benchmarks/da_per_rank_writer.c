@@ -188,7 +188,6 @@ void write_data(size_t datasize_mb, int steps, int async) {
 
   for (iter = 0; iter < steps; iter++) {
 
-    CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:write-time");
     /** set array location */
     iod.arr_nr = 1;
     rg.rg_len = elements_per_rank * sizeof(char) / cell_size;
@@ -201,6 +200,7 @@ void write_data(size_t datasize_mb, int steps, int async) {
     d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
     sgl.sg_iovs = &iov;
 
+    CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:write-time");
     rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
     assert_rc_equal(rc, 0);
     CALI_MARK_END("daos_array-writer-obj-per-rank:write-time");
