@@ -23,6 +23,8 @@ int wrank;
 int procs;
 char node[128] = "unknown";
 
+enum Pattern {Strided= 1, Sequence = 0}; 
+
 /* MPI communicator for writers */
 MPI_Comm comm;
 
@@ -139,7 +141,7 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t datasize_mb, int steps, int async) {
+void write_data(size_t datasize_mb, int steps, int async, int pattern_flag) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -239,6 +241,13 @@ int main(int argc, char **argv) {
   uuid_parse(argv[2], co_uuid);
   size_t datasize_mb = atoi(argv[3]);
   int steps = atoi(argv[4]);
+  char *pattern = argv[5];
+  int pattern_flag;
+
+  if(strcmp(pattern,"sequential") == 0)
+   pattern_flag = Sequence;
+  else
+  
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -302,7 +311,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(datasize_mb, steps);
-  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/);
+  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/, pattern_flag);
 
   /** close container */
   MPI_Barrier(MPI_COMM_WORLD);
