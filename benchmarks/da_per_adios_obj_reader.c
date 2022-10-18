@@ -195,7 +195,7 @@ void shuffle(int *array, size_t n) {
   }
 }
 
-void read_data(size_t datasize_mb, size_t iosize_bytes, int steps, int async,
+void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
                int flag_random_read) {
   daos_obj_id_t oid;
   daos_handle_t oh;
@@ -319,10 +319,10 @@ void read_data(size_t datasize_mb, size_t iosize_bytes, int steps, int async,
     CALI_MARK_END("daos_array-reader:open_array");
 
     /** set array location */
-    iod.arr_nr = elements_per_rank / iosize_bytes;
+    iod.arr_nr = elements_per_rank / get_size;
     rg = (daos_range_t *)malloc(iod.arr_nr * sizeof(daos_range_t));
     daos_off_t start_index = rank * elements_per_rank / sizeof(char);
-    daos_size_t read_length = sizeof(char) * iosize_bytes;
+    daos_size_t read_length = sizeof(char) * get_size;
 
     // Array of offsets to choose at random. This array will track offset
     // chosen
@@ -337,7 +337,7 @@ void read_data(size_t datasize_mb, size_t iosize_bytes, int steps, int async,
 
     for (iter = 0; iter < iod.arr_nr; iter++) {
       rg[iter].rg_len = read_length;
-      rg[iter].rg_idx = start_index + arr_offsets[iter] * iosize_bytes;
+      rg[iter].rg_idx = start_index + arr_offsets[iter] * get_size;
     }
     iod.arr_rgs = rg;
 
@@ -386,7 +386,7 @@ int main(int argc, char **argv) {
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
   size_t datasize_mb = strtol(argv[3], NULL, 10);
-  size_t iosize_bytes = strtol(argv[4], NULL, 10);
+  size_t get_size = strtol(argv[4], NULL, 10);
   int steps = strtol(argv[5], NULL, 10);
   int flag_random_read;
 
@@ -457,7 +457,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(datasize_mb, steps);
-  read_data(datasize_mb, iosize_bytes, steps, 0 /* Async I/O flag False*/,
+  read_data(datasize_mb, get_size, steps, 0 /* Async I/O flag False*/,
             flag_random_read);
 
   /** close container */

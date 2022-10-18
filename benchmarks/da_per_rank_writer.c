@@ -184,6 +184,20 @@ void write_data(size_t datasize_mb, int steps, int async) {
                          NULL);
   assert_rc_equal(rc, 0);
 
+  // Share oid.ho, oid.lo can be calculated
+  if(rank == 0) {
+    fp = fopen("./share/oid_hi.txt", "w");
+    fprintf(fp, "%lu", oid.hi);
+    fclose(fp);
+
+    fp = fopen("./share/oid_part_count.txt", "w");
+    fd = fileno(fp);
+    if (flock(fd, LOCK_EX) == -1)
+      exit(1);
+    fprintf(fp, "%d", 1);
+    fclose(fp);
+  }
+
   CALI_MARK_BEGIN("daos_array-writer-obj-per-rank:iterations");
 
   for (iter = 0; iter < steps; iter++) {

@@ -103,7 +103,7 @@ for NR in $PROCS; do
 			GLOBAL_ARRAY_SIZE=$(echo "scale=0; $DATASIZE * ($NR)" | bc)
 			echo "global array size: $GLOBAL_ARRAY_SIZE"
 
-			if [ $ENG_TYPE == "daos-array" ]; then
+			if [ $ENG_TYPE == "da_per_adios_obj" ]; then
 				echo "Destroying previous containers, if any "
 				daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
 
