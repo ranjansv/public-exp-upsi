@@ -177,12 +177,6 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-// structure for message queue
-typedef struct mesg_buffer {
-  long mesg_type;
-  char mesg_text[100];
-} MesQ;
-
 void shuffle(int *array, size_t n) {
   if (n > 1) {
     size_t i;
@@ -213,9 +207,6 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
   daos_size_t size;
   char *eptr;
 
-  MesQ recv_q;
-  key_t key;
-  int msgid;
   FILE *fp;
   char buf[100];
 
