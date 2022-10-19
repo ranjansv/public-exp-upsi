@@ -23,7 +23,10 @@ int wrank;
 int procs;
 char node[128] = "unknown";
 
-enum Pattern {Strided= 1, Sequence = 0}; 
+enum Pattern {
+  Strided = 1,
+  Sequence = 0
+};
 
 /* MPI communicator for writers */
 MPI_Comm comm;
@@ -185,7 +188,7 @@ void write_data(size_t datasize_mb, int steps, int async) {
   assert_rc_equal(rc, 0);
 
   // Share oid.ho, oid.lo can be calculated
-  if(rank == 0) {
+  if (rank == 0) {
     fp = fopen("./share/oid_hi.txt", "w");
     fprintf(fp, "%lu", oid.hi);
     fclose(fp);
@@ -256,7 +259,6 @@ int main(int argc, char **argv) {
   size_t datasize_mb = atoi(argv[3]);
   int steps = atoi(argv[4]);
   char *pattern = argv[5];
-  
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");

@@ -148,8 +148,8 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t datasize_mb, int put_size, int steps,
-                                    int async, int pattern_flag) {
+void write_data(size_t datasize_mb, int put_size, int steps, int async,
+                int pattern_flag) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -362,8 +362,8 @@ int main(int argc, char **argv) {
   CALI_MARK_END("daos_array-writer:cont_connect");
 
   /** the other tasks write the array */
-  write_data(datasize_mb, put_size, steps,
-                                 0 /* Async I/O flag False*/, pattern_flag);
+  write_data(datasize_mb, put_size, steps, 0 /* Async I/O flag False*/,
+             pattern_flag);
 
   /** close container */
   daos_cont_close(coh, NULL);
