@@ -445,7 +445,7 @@ int main(int argc, char **argv) {
   /** the other tasks write the array */
   // array(datasize_mb, steps);
   read_data(datasize_mb, get_size, steps, 0 /* Async I/O flag False*/,
-            flag_random_read, read_data);
+            flag_random_read, read_ratio);
 
   /** close container */
   daos_cont_close(coh, NULL);
