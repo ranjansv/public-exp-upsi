@@ -199,10 +199,9 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
   d_sg_list_t sgl;
   d_iov_t iov;
   char *rbuf = NULL;
-  daos_size_t i;
   daos_event_t ev, *evp;
   int rc;
-  int iter;
+  int iter, i;
   size_t elements_per_rank;
   daos_size_t size;
   char *eptr;
@@ -320,15 +319,15 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     // so that we don't pick them again
     int arr_offsets[iod.arr_nr];
 
-    for (iter = 0; iter < iod.arr_nr; iter++)
-      arr_offsets[iter] = iter;
+    for (i = 0; i < iod.arr_nr; i++)
+      arr_offsets[i] = i;
 
     if (flag_random_read == 1)
       shuffle(arr_offsets, iod.arr_nr);
 
-    for (iter = 0; iter < iod.arr_nr; iter++) {
-      rg[iter].rg_len = read_length;
-      rg[iter].rg_idx = start_index + arr_offsets[iter] * get_size;
+    for (i = 0; i < iod.arr_nr; i++) {
+      rg[i].rg_len = read_length;
+      rg[i].rg_idx = start_index + arr_offsets[i] * get_size;
     }
     iod.arr_rgs = rg;
 

@@ -233,14 +233,14 @@ void write_data(size_t datasize_mb, int put_size, int steps,
 
     int arr_offsets[iod.arr_nr];
 
-    for (iter = 0; iter < iod.arr_nr; iter++) {
+    for (i = 0; i < iod.arr_nr; i++) {
       if (pattern_flag == Sequence)
-        arr_offsets[iter] = iter;
+        arr_offsets[i] = i;
       else
-        arr_offsets[iter] = (iter + 14) % iod.arr_nr;
+        arr_offsets[i] = (i + 14) % iod.arr_nr;
 
-      rg[iter].rg_len = write_length;
-      rg[iter].rg_idx = start_index + arr_offsets[iter] * put_size;
+      rg[i].rg_len = write_length;
+      rg[i].rg_idx = start_index + arr_offsets[i] * put_size;
     }
     iod.arr_rgs = rg;
 
