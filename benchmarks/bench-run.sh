@@ -1,7 +1,7 @@
 POOL_UUID=$(dmg -i -o $daos_config pool list --verbose | grep ranjan | awk '{print $2}')
 echo "POOL_UUID: $POOL_UUID"
 echo "SLURM_JOB_NUM_NODES: $SLURM_JOB_NUM_NODES"
-#SLURM_JOB_CPUS_PER_NODE=28
+SLURM_JOB_CPUS_PER_NODE=28
 echo "SLURM_JOB_CPUS_PER_NODE: $SLURM_JOB_CPUS_PER_NODE"
 
 CONFIG_FILE=$1
@@ -63,14 +63,6 @@ for NR in $PROCS; do
 
 	NR_READERS=$(echo "scale=0; $NR/$READ_WRITE_RATIO" | bc)
 
-	if [ $BENCH_TYPE == "workflow" ]; then
-		TOTAL_RANKS=$(echo "scale=0; $NR + $NR_READERS" | bc)
-		if [ $TOTAL_RANKS -gt 28 ]; then
-			echo "Single node cannot run both writer and reader ranks, totaling to $TOTAL_RANKS ranks"
-			exit
-		fi
-		echo "First reader offset: $offset"
-	fi
 	for IO_NAME in $ENGINE; do
 		#Parse IO_NAME for engine and storage type in case of DAOS
 		if grep -q "adios+daos-posix" <<<"$IO_NAME"; then
@@ -131,12 +123,6 @@ for NR in $PROCS; do
 						ELAPSED_TIME=$(($SECONDS - $START_TIME))
 						echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-${IOSIZE}-time.log
 					done
-				elif [ $BENCH_TYPE == "workflow" ]; then
-					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/da_per_adios_obj_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log &
-					ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/da_per_adios_obj_reader $POOL_UUID $CONT_UUID $DATASIZE $READ_IO_SIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-readers.log
-					ELAPSED_TIME=$(($SECONDS - $START_TIME))
-					echo "$ELAPSED_TIME" >$OUTPUT_DIR/workflow-time.log
 				fi
 
 			elif [ $ENG_TYPE == "adios+daos-posix" ]; then
@@ -189,13 +175,6 @@ for NR in $PROCS; do
 							ELAPSED_TIME=$(($SECONDS - $START_TIME))
 							echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-$IOSIZE-time.log
 						done
-
-					elif [ $BENCH_TYPE == "workflow" ]; then
-						START_TIME=$SECONDS
-						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-writer posix $FILENAME $DATASIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log &
-						ibrun -o $offset -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-reader posix $FILENAME $READ_IO_SIZE &>>$OUTPUT_DIR/stdout-mpirun-readers.log
-						ELAPSED_TIME=$(($SECONDS - $START_TIME))
-						echo "$ELAPSED_TIME" >$OUTPUT_DIR/workflow-time.log
 					fi
 
 					rm -rf $FILENAME/* &>/dev/null
@@ -315,9 +294,3 @@ echo ""
 echo ""
 echo "READ TIME"
 find $RESULT_DIR/ -iname 'compareread*.csv' | xargs tail
-
-if [ $BENCH_TYPE == "workflow" ]; then
-	echo ""
-	echo "Workflow times"
-	find $RESULT_DIR/ -iname 'workflow*.csv' | xargs tail
-fi
