@@ -366,10 +366,11 @@ int main(int argc, char **argv) {
   size_t datasize_mb = strtol(argv[3], NULL, 10);
   size_t get_size = strtol(argv[4], NULL, 10);
   int steps = strtol(argv[5], NULL, 10);
-  int read_ratio = strtol(argv[6], NULL, 10);
+  char *read_pattern = argv[6];
+  int read_ratio = strtol(argv[7], NULL, 10);
   int flag_random_read;
 
-  if (strcmp(argv[6], "random") == 0)
+  if (strcmp(read_pattern, "random") == 0)
     flag_random_read = 1;
   else
     flag_random_read = 0;
