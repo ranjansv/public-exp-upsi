@@ -48,8 +48,11 @@ for NR in $PROCS; do
 		for IOSIZE in $READ_IO_SIZE; do
 			echo -n "$IOSIZE" >>$OUTPUT_FILE
 			for IO_NAME in $ENGINE; do
-				if [ $IO_NAME == "daos-array" ]; then
-					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/daos-array/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
+				if [ $IO_NAME == "daos_array_per_adios_var" ]; then
+					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
+					echo -n ",$READ_TIME" >>$OUTPUT_FILE
+				elif [ $IO_NAME == "daos_array_per_rank" ]; then
+					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "adios+daos-posix" ]; then
 					ADIOS_XML=$AGGREGATORS
@@ -77,8 +80,11 @@ for NR in $PROCS; do
                 sed -i 's/\s/,/g' $OUTPUT_FILE
                 echo -n $DATASIZE >> $OUTPUT_FILE
                         for IO_NAME in $ENGINE; do
-                                if [ $IO_NAME == "daos-array" ]; then
-                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/daos-array/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
+                                if [ $IO_NAME == "daos_array_per_adios_var" ]; then
+                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
+                                        echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
+                                elif [ $IO_NAME == "daos_array_per_rank" ]; then
+                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "adios+daos-posix" ]; then
                                         ADIOS_XML=$AGGREGATORS

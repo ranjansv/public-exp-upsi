@@ -35,17 +35,17 @@ target_link_libraries(adios-writer PRIVATE adios2::cxx11_mpi MPI::MPI_C caliper)
 add_executable(adios-reader adios-reader.cpp)
 target_link_libraries(adios-reader PRIVATE adios2::cxx11_mpi MPI::MPI_C caliper)
 
-add_executable(da_per_rank_writer da_per_rank_writer.c)
-target_link_libraries(da_per_rank_writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
+add_executable(daos_array_per_rank_writer daos_array_per_rank_writer.c)
+target_link_libraries(daos_array_per_rank_writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
-add_executable(da_per_rank_reader da_per_rank_reader.c)
-target_link_libraries(da_per_rank_reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
+add_executable(daos_array_per_rank_reader daos_array_per_rank_reader.c)
+target_link_libraries(daos_array_per_rank_reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
-add_executable(da_per_adios_obj_writer da_per_adios_obj_writer.c)
-target_link_libraries(da_per_adios_obj_writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
+add_executable(daos_array_per_adios_var_writer daos_array_per_adios_var_writer.c)
+target_link_libraries(daos_array_per_adios_var_writer PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
-add_executable(da_per_adios_obj_reader da_per_adios_obj_reader.c)
-target_link_libraries(da_per_adios_obj_reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
+add_executable(daos_array_per_adios_var_reader daos_array_per_adios_var_reader.c)
+target_link_libraries(daos_array_per_adios_var_reader PRIVATE daos daos_common gurt cart  uuid cmocka daos_tests MPI::MPI_C caliper)
 
 
 #add_executable(simple_array simple_array.c)
