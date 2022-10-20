@@ -23,6 +23,11 @@ int wrank;
 int procs;
 char node[128] = "unknown";
 
+enum Pattern {
+ Random = 1,
+ Sequential = 0
+};
+
 /* MPI communicator for writers */
 MPI_Comm comm;
 
@@ -317,7 +322,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
       for (j = 0; j < iod[i].arr_nr; j++)
         arr_offsets[j] = j;
 
-      if (flag_random_read == 1)
+      if (flag_random_read == Random)
         shuffle(arr_offsets, iod[i].arr_nr);
 
       for (j = 0; j < iod[i].arr_nr; j++) {
@@ -368,9 +373,9 @@ int main(int argc, char **argv) {
   int flag_random_read;
 
   if (strcmp(read_pattern, "random") == 0)
-    flag_random_read = 1;
+    flag_random_read = Random;
   else
-    flag_random_read = 0;
+    flag_random_read = Sequential;
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
