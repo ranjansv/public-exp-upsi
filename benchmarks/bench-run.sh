@@ -87,7 +87,7 @@ for NR in $PROCS; do
 		for DATASIZE in $DATA_PER_RANK; do
 			echo ""
 			echo ""
-			echo "Processing ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mbi with $NR writers and $NR_READERS readers"
+			echo "Processing ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb with $NR writers and $NR_READERS readers"
 			#Choose PROCS and STEPS so that global array size is a whole numebr
 			GLOBAL_ARRAY_SIZE=$(echo "scale=0; $DATASIZE * ($NR)" | bc)
 			echo "global array size: $GLOBAL_ARRAY_SIZE"

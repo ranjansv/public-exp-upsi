@@ -307,11 +307,14 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     }
     CALI_MARK_END("daos_array-reader:open_array");
 
+    //Iteration through writers based on read_ratio, same as oids_nr
     for (i = 0; i < oids_nr; i++) {
       /** set array location */
-      iod[i].arr_nr = elements_per_rank / get_size;
+      uint64_t elements_from_each_writer = elements_per_rank / read_ratio;
+      iod[i].arr_nr = elements_from_each_writer / get_size;
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
-      daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+      daos_off_t start_index = 0;
+      //daos_off_t start_index = rank * elements_per_rank / sizeof(char);
       daos_size_t read_length = sizeof(char) * get_size;
 
       // Array of offsets to choose at random. This array will track offset
@@ -333,7 +336,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
       /** set memory location */
       sgl[i].sg_nr = 1;
-      d_iov_set(&iov, rbuf, elements_per_rank * sizeof(char));
+      d_iov_set(&iov, rbuf + i * elements_from_each_writer, elements_from_each_writer * sizeof(char));
       sgl[i].sg_iovs = &iov;
     }
 
