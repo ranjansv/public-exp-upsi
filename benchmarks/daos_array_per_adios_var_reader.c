@@ -304,9 +304,10 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
     /** set array location */
     for (i = 0; i < num_adios_var; i++) {
-      iod[i].arr_nr = elements_per_rank / get_size;
+      uint64_t elements_per_adios_var = elements_per_rank/num_adios_var;
+      iod[i].arr_nr = elements_per_adios_var / get_size;
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
-      daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+      daos_off_t start_index = rank * elements_per_adios_var / sizeof(char);
       daos_size_t read_length = sizeof(char) * get_size;
 
       // Array of offsets to choose at random. This array will track offset
@@ -328,7 +329,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
       /** set memory location */
       sgl[i].sg_nr = 1;
-      d_iov_set(&iov, rbuf, elements_per_rank * sizeof(char));
+      d_iov_set(&iov, rbuf + i * elements_per_adios_var, elements_per_adios_var * sizeof(char));
       sgl[i].sg_iovs = &iov;
     }
 /*
