@@ -107,7 +107,7 @@ for NR in $PROCS; do
 				mkdir -p $OUTPUT_DIR
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE $STEPS $WRITE_PATTERN &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE $STEPS $WRITE_PATTERN $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
@@ -116,7 +116,7 @@ for NR in $PROCS; do
 					for GET_SIZE in $READ_IO_SIZE; do
 						echo "Starting readers with read io size(bytes): $GET_SIZE"
 						START_TIME=$SECONDS
-						ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_reader $POOL_UUID $CONT_UUID $DATASIZE $GET_SIZE $STEPS $READ_PATTERN $READ_WRITE_RATIO &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$GET_SIZE.log
+						ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_reader $POOL_UUID $CONT_UUID $DATASIZE $GET_SIZE $STEPS $READ_PATTERN $READ_WRITE_RATIO $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$GET_SIZE.log
 						ELAPSED_TIME=$(($SECONDS - $START_TIME))
 						echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-${GET_SIZE}-time.log
 					done
@@ -136,7 +136,7 @@ for NR in $PROCS; do
 				mkdir -p $OUTPUT_DIR
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 					START_TIME=$SECONDS
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 					ELAPSED_TIME=$(($SECONDS - $START_TIME))
 					echo "$ELAPSED_TIME" >$OUTPUT_DIR/writeworkflow-time.log
 
@@ -145,7 +145,7 @@ for NR in $PROCS; do
 					for GET_SIZE in $READ_IO_SIZE; do
 						echo "Starting readers with read io size(bytes): $GET_SIZE"
 						START_TIME=$SECONDS
-						ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $GET_SIZE $STEPS $READ_PATTERN $READ_WRITE_RATIO &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$GET_SIZE.log
+						ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $GET_SIZE $STEPS $READ_PATTERN $READ_WRITE_RATIO $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers-iosize-$GET_SIZE.log
 						ELAPSED_TIME=$(($SECONDS - $START_TIME))
 						echo "$ELAPSED_TIME" >$OUTPUT_DIR/readworkflow-iosize-${GET_SIZE}-time.log
 					done

@@ -149,12 +149,12 @@ static void array_oh_share(daos_handle_t *oh) {
 }
 
 void write_data(size_t datasize_mb, int put_size, int steps, int async,
-                int pattern_flag) {
-  daos_obj_id_t oid;
-  daos_handle_t oh;
-  daos_array_iod_t iod;
-  daos_range_t *rg;
-  d_sg_list_t sgl;
+                int pattern_flag, int num_adios_var) {
+  daos_obj_id_t oid[num_adios_var];
+  daos_handle_t oh[num_adios_var];
+  daos_array_iod_t iod[num_adios_var];
+  daos_range_t *rg[num_adios_var];
+  d_sg_list_t sgl[num_adios_var];
   d_iov_t iov;
   char *wbuf = NULL;
   daos_size_t i;
@@ -170,42 +170,36 @@ void write_data(size_t datasize_mb, int put_size, int steps, int async,
 
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = 1048576;
+  uint64_t hi;
 
   CALI_MARK_BEGIN("daos_array-writer:oid-gen-n-share");
   if (rank == 0) {
-    // oid = daos_test_oid_gen(coh, OC_SX, (cell_size == 1) ? featb : feat, 0,
-    // 0);
-    oid.hi = 0;
-    oid.lo = 3;
-    daos_array_generate_oid(coh, &oid, true, 0, 0, 0);
-    rc = daos_array_create(coh, oid, DAOS_TX_NONE, cell_size, chunk_size, &oh,
-                           NULL);
-    assert_rc_equal(rc, 0);
-
-    fp = fopen("./share/oid_lo.txt", "w");
-    fprintf(fp, "%lu", oid.lo);
-    fclose(fp);
+    for (i = 0; i < num_adios_var; i++) {
+      oid[i].hi = 0;
+      oid[i].lo = i;
+      daos_array_generate_oid(coh, &oid[i], true, 0, 0, 0);
+      rc = daos_array_create(coh, oid[i], DAOS_TX_NONE, cell_size, chunk_size,
+                             &oh[i], NULL);
+      assert_rc_equal(rc, 0);
+      hi = oid[i].hi;
+    }
 
     fp = fopen("./share/oid_hi.txt", "w");
-    fprintf(fp, "%lu", oid.hi);
+    fprintf(fp, "%lu", hi);
     fclose(fp);
 
     fp = fopen("./share/oid_part_count.txt", "w");
     fd = fileno(fp);
     if (flock(fd, LOCK_EX) == -1)
       exit(1);
-    fprintf(fp, "%d", 2);
+    fprintf(fp, "%d", 1);
     fclose(fp);
-
-    printf("oid.lo = %lu, oid.hi = %lu\n", oid.lo, oid.hi);
   }
-  array_oh_share(&oh);
+  for (i = 0; i < num_adios_var; i++) {
+    array_oh_share(&oh[i]);
+  }
   CALI_MARK_END("daos_array-writer:oid-gen-n-share");
 
-  /** Allocate and set buffer */
-  // elements_per_rank = datasize_mb ;
-  if (rank == 0)
-    printf("datasize_mb = %d\n", datasize_mb);
   elements_per_rank = datasize_mb * MB_in_bytes;
   D_ALLOC_ARRAY(wbuf, elements_per_rank);
   assert_non_null(wbuf);
@@ -213,7 +207,6 @@ void write_data(size_t datasize_mb, int put_size, int steps, int async,
   for (i = 0; i < elements_per_rank; i++)
     wbuf[i] = i + 1;
 
-  daos_handle_t th;
   char snapshot_name[50];
 
   int num_snapshots = 0;
@@ -222,40 +215,50 @@ void write_data(size_t datasize_mb, int put_size, int steps, int async,
   daos_anchor_t anchor;
   memset(&anchor, 0, sizeof(anchor));
 
+  int j;
+
   CALI_MARK_BEGIN("daos_array-writer:iterations");
 
   for (iter = 0; iter < steps; iter++) {
     /** set array location */
-    iod.arr_nr = elements_per_rank / put_size;
-    rg = (daos_range_t *)malloc(iod.arr_nr * sizeof(daos_range_t));
-    daos_off_t start_index = rank * elements_per_rank / sizeof(char);
-    daos_size_t write_length = sizeof(char) * put_size;
+    for (i = 0; i < num_adios_var; i++) {
+      uint64_t elements_per_adios_var_per_rank =
+          elements_per_rank / num_adios_var;
+      iod[i].arr_nr = elements_per_adios_var_per_rank / put_size;
+      rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
+      daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+      daos_size_t write_length = sizeof(char) * put_size;
 
-    int arr_offsets[iod.arr_nr];
+      int arr_offsets[iod[i].arr_nr];
 
-    for (i = 0; i < iod.arr_nr; i++) {
-      if (pattern_flag == Sequence)
-        arr_offsets[i] = i;
-      else
-        arr_offsets[i] = (i + 14) % iod.arr_nr;
+      for (j = 0; j < iod[i].arr_nr; j++) {
+        if (pattern_flag == Sequence)
+          arr_offsets[j] = j;
+        else
+          arr_offsets[j] = (j + 14) % iod[i].arr_nr;
 
-      rg[i].rg_len = write_length;
-      rg[i].rg_idx = start_index + arr_offsets[i] * put_size;
+        rg[i][j].rg_len = write_length;
+        rg[i][j].rg_idx = start_index + arr_offsets[j] * put_size;
+      }
+      iod[i].arr_rgs = rg[i];
+
+      /** set memory location */
+      sgl[i].sg_nr = 1;
+      d_iov_set(&iov, wbuf, elements_per_adios_var_per_rank * sizeof(char));
+      sgl[i].sg_iovs = &iov;
     }
-    iod.arr_rgs = rg;
-
-    /** set memory location */
-    sgl.sg_nr = 1;
-    d_iov_set(&iov, wbuf, elements_per_rank * sizeof(char));
-    sgl.sg_iovs = &iov;
 
     CALI_MARK_BEGIN("daos_array-writer:write-time");
-    rc = daos_array_write(oh, DAOS_TX_NONE, &iod, &sgl, async ? &ev : NULL);
-    assert_rc_equal(rc, 0);
+    for (i = 0; i < num_adios_var; i++) {
+      rc = daos_array_write(oh[i], DAOS_TX_NONE, &iod[i], &sgl[i],
+                            async ? &ev : NULL);
+      assert_rc_equal(rc, 0);
+    }
     CALI_MARK_END("daos_array-writer:write-time");
 
     MPI_Barrier(MPI_COMM_WORLD);
-    free(rg);
+    for (i = 0; i < num_adios_var; i++)
+      free(rg[i]);
 
     CALI_MARK_BEGIN("daos_array-writer:snapshot-time");
     if (rank == 0) {
@@ -283,9 +286,11 @@ void write_data(size_t datasize_mb, int put_size, int steps, int async,
   CALI_MARK_END("daos_array-writer:iterations");
 
   if (rank == 0) {
-    rc = daos_array_get_size(oh, DAOS_TX_NONE, &size, NULL);
-    ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
-    printf("Array size = %lu\n", size);
+    for (i = 0; i < num_adios_var; i++) {
+      rc = daos_array_get_size(oh[i], DAOS_TX_NONE, &size, NULL);
+      ASSERT(rc == 0, "daos_array_get_size failed with %d", rc);
+      printf("Array %d size = %lu\n", i + 1, size);
+    }
 
     rc = daos_cont_list_snap(coh, &num_snapshots, epochs, list_snapnames,
                              &anchor, NULL);
@@ -304,6 +309,7 @@ int main(int argc, char **argv) {
   int put_size = strtol(argv[4], NULL, 10);
   int steps = strtol(argv[5], NULL, 10);
   char *pattern = argv[6];
+  int num_adios_var = strtol(argv[7], NULL, 10);
   int pattern_flag = 0;
 
   if (strcmp(pattern, "sequential") == 0)
@@ -332,6 +338,7 @@ int main(int argc, char **argv) {
     printf("put_size = %d\n", put_size);
     printf("steps = %d\n", steps);
     printf("write pattern = %s\n", pattern);
+    printf("num_adios_var = %d\n", num_adios_var);
   }
 
   /** initialize the local DAOS stack */
@@ -370,7 +377,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   write_data(datasize_mb, put_size, steps, 0 /* Async I/O flag False*/,
-             pattern_flag);
+             pattern_flag, num_adios_var);
 
   /** close container */
   daos_cont_close(coh, NULL);
