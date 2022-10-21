@@ -304,7 +304,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
     /** set array location */
     for (i = 0; i < num_adios_var; i++) {
-      uint64_t elements_per_adios_var = elements_per_rank/num_adios_var;
+      uint64_t elements_per_adios_var = elements_per_rank / num_adios_var;
       iod[i].arr_nr = elements_per_adios_var / get_size;
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
       daos_off_t start_index = rank * elements_per_adios_var / sizeof(char);
@@ -329,28 +329,31 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
       /** set memory location */
       sgl[i].sg_nr = 1;
-      d_iov_set(&iov, rbuf + i * elements_per_adios_var, elements_per_adios_var * sizeof(char));
+      d_iov_set(&iov, rbuf + i * elements_per_adios_var,
+                elements_per_adios_var * sizeof(char));
       sgl[i].sg_iovs = &iov;
     }
-/*
-    if (rank == 0 && iter == 0) {
-      printf("arr_nr = %lu\n", iod.arr_nr);
-      printf("start_index = %lu\n", start_index);
-      printf("read_length = %lu\n", read_length);
-    }
-*/
+    /*
+        if (rank == 0 && iter == 0) {
+          printf("arr_nr = %lu\n", iod.arr_nr);
+          printf("start_index = %lu\n", start_index);
+          printf("read_length = %lu\n", read_length);
+        }
+    */
     CALI_MARK_BEGIN("daos_array-reader:read-time");
     for (i = 0; i < num_adios_var; i++) {
-    rc = daos_array_read(oh[i], th, &iod[i], &sgl[i], NULL);
-    ASSERT(rc == 0, "daos_array_read failed with %d", rc);}
+      rc = daos_array_read(oh[i], th, &iod[i], &sgl[i], NULL);
+      ASSERT(rc == 0, "daos_array_read failed with %d", rc);
+    }
     CALI_MARK_END("daos_array-reader:read-time");
 
     free(rg);
 
     CALI_MARK_BEGIN("daos_array-reader:close_array");
     for (i = 0; i < num_adios_var; i++) {
-    rc = daos_array_close(oh[i], NULL);
-    ASSERT(rc == 0, "daos_array_close failed with %d", rc);}
+      rc = daos_array_close(oh[i], NULL);
+      ASSERT(rc == 0, "daos_array_close failed with %d", rc);
+    }
     CALI_MARK_END("daos_array-reader:close_array");
 
     MPI_Barrier(MPI_COMM_WORLD);
