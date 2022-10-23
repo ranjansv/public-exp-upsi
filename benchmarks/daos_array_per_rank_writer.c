@@ -144,11 +144,11 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t datasize_mb, int steps, int async, int num_adios_var) {
+void write_data(size_t datasize_mb, int steps, int async, int put_size, int num_adios_var) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
-  daos_range_t rg;
+  daos_range_t *rg;
   d_sg_list_t sgl;
   d_iov_t iov;
   char *wbuf = NULL;
@@ -165,11 +165,8 @@ void write_data(size_t datasize_mb, int steps, int async, int num_adios_var) {
   /* Temporary assignment */
   daos_size_t cell_size = 1;
   static daos_size_t chunk_size = MB_in_bytes;
-  // static daos_size_t chunk_size = 2097152;
-  // static daos_size_t chunk_size = 16;
 
   /** Allocate and set buffer */
-  // elements_per_rank = datasize_mb ;
   elements_per_rank = datasize_mb * MB_in_bytes;
   D_ALLOC_ARRAY(wbuf, elements_per_rank);
   assert_non_null(wbuf);
@@ -204,11 +201,14 @@ void write_data(size_t datasize_mb, int steps, int async, int num_adios_var) {
   for (iter = 0; iter < steps; iter++) {
 
     /** set array location */
-    iod.arr_nr = 1;
-    rg.rg_len = elements_per_rank * sizeof(char) / cell_size;
-    rg.rg_idx = 0;
+    iod.arr_nr = elements_per_rank / put_size;
+    rg = (daos_range_t *)malloc(iod.arr_nr * sizeof(daos_range_t));
+    for(i = 0; i < iod.arr_nr; i++)  {
+    rg[i].rg_len = put_size * sizeof(char) / cell_size;
+    rg[i].rg_idx = i * put_size;
+    }
     // rg.rg_idx = rank * rg.rg_len;
-    iod.arr_rgs = &rg;
+    iod.arr_rgs = rg;
 
     /** set memory location */
     sgl.sg_nr = 1;
@@ -254,9 +254,10 @@ int main(int argc, char **argv) {
   int rc;
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
-  size_t datasize_mb = strtol(argv[3], NULL, 10); 
+  size_t datasize_mb = strtol(argv[3], NULL, 10);
   int steps = strtol(argv[4], NULL, 10);
-  int num_adios_var = strtol(argv[5], NULL, 10);
+  int put_size = strtol(argv[5], NULL, 10);
+  int num_adios_var = strtol(argv[6], NULL, 10);
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -277,7 +278,6 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     printf("datasize_mb = %lu\n", datasize_mb);
     printf("steps = %d\n", steps);
-    printf("num_adios_var = %d\n", num_adios_var);
   }
 
   /** initialize the local DAOS stack */
@@ -326,7 +326,7 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(datasize_mb, steps);
-  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/);
+  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/,put_size, num_adios_var);
 
   /** close container */
   MPI_Barrier(MPI_COMM_WORLD);
