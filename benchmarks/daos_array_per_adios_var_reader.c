@@ -194,7 +194,7 @@ void shuffle(int *array, size_t n) {
 }
 
 void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
-               int flag_random_read, int read_ratio, int num_adios_var) {
+               int flag_read_pattern, int read_ratio, int num_adios_var) {
   daos_obj_id_t oid[num_adios_var];
   daos_handle_t oh[num_adios_var];
   daos_handle_t th;
@@ -258,6 +258,8 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
   D_ALLOC_ARRAY(rbuf, elements_per_rank);
   assert_non_null(rbuf);
 
+  get_size = elements_per_rank;
+
   CALI_MARK_BEGIN("daos_array-reader:iterations");
 
   for (iter = 0; iter < steps; iter++) {
@@ -296,35 +298,42 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
     CALI_MARK_BEGIN("daos_array-reader:open_array");
     for (i = 0; i < num_adios_var; i++) {
+      oids[i].lo = i;
+      oids[i].hi = hi;
       rc = daos_array_open(coh, oids[i], th, DAOS_OO_RW, &cell_size,
                            &chunk_size, &oh[i], NULL);
       ASSERT(rc == 0, "daos_array_open failed with %d", rc);
     }
     CALI_MARK_END("daos_array-reader:open_array");
+    if(!rank)
+       printf("daos_array_open() complete\n");
 
+    uint64_t elements_per_adios_var = elements_per_rank / num_adios_var;
     /** set array location */
     for (i = 0; i < num_adios_var; i++) {
-      uint64_t elements_per_adios_var = elements_per_rank / num_adios_var;
-      iod[i].arr_nr = elements_per_adios_var / get_size;
+      iod[i].arr_nr = 1
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
       daos_off_t start_index = rank * elements_per_adios_var / sizeof(char);
-      daos_size_t read_length = sizeof(char) * get_size;
+      daos_size_t read_length = elements_per_adios_var;
 
       // Array of offsets to choose at random. This array will track offset
-      // chosen
-      // so that we don't pick them again
+      // chosen so that we don't pick them again
       int arr_offsets[iod[i].arr_nr];
 
       for (i = 0; i < iod[i].arr_nr; i++)
         arr_offsets[i] = i;
 
-      if (flag_random_read == Random)
+      if (flag_read_pattern == Random)
         shuffle(arr_offsets, iod[i].arr_nr);
 
+/*
       for (j = 0; j < iod[i].arr_nr; j++) {
         rg[i][j].rg_len = read_length;
         rg[i][j].rg_idx = start_index + arr_offsets[j] * get_size;
       }
+*/
+      rg[i][0].rg_len = elements_per_adios_var;
+      rg[i][0].rg_idx = start_index;
       iod[i].arr_rgs = rg[i];
 
       /** set memory location */
@@ -333,19 +342,20 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
                 elements_per_adios_var * sizeof(char));
       sgl[i].sg_iovs = &iov;
     }
-    /*
-        if (rank == 0 && iter == 0) {
-          printf("arr_nr = %lu\n", iod.arr_nr);
-          printf("start_index = %lu\n", start_index);
-          printf("read_length = %lu\n", read_length);
-        }
-    */
+
+    if(!rank)
+      printf("Filled up IOD and SGL\n");
+
+
     CALI_MARK_BEGIN("daos_array-reader:read-time");
     for (i = 0; i < num_adios_var; i++) {
       rc = daos_array_read(oh[i], th, &iod[i], &sgl[i], NULL);
       ASSERT(rc == 0, "daos_array_read failed with %d", rc);
     }
     CALI_MARK_END("daos_array-reader:read-time");
+
+    if(!rank)
+       printf("daos_array_read() complete\n");
 
     free(rg);
 
@@ -355,6 +365,9 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
       ASSERT(rc == 0, "daos_array_close failed with %d", rc);
     }
     CALI_MARK_END("daos_array-reader:close_array");
+
+    if(!rank)
+       printf("daos_array_close() completed\n");
 
     MPI_Barrier(MPI_COMM_WORLD);
   }
@@ -368,18 +381,22 @@ int main(int argc, char **argv) {
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
   size_t datasize_mb = strtol(argv[3], NULL, 10);
-  size_t get_size = strtol(argv[4], NULL, 10);
-  int steps = strtol(argv[5], NULL, 10);
-  char *read_pattern = argv[6];
-  int read_ratio = strtol(argv[7], NULL, 10);
-  int num_adios_var = strtol(argv[8], NULL, 10);
-  int flag_random_read;
+  int steps = strtol(argv[4], NULL, 10);
+  // char *read_pattern = argv[6];
+  int read_ratio = strtol(argv[5], NULL, 10);
+  int num_adios_var = strtol(argv[6], NULL, 10);
+  int flag_read_pattern;
 
-  if (strcmp(read_pattern, "random") == 0)
-    flag_random_read = Random;
-  else
-    flag_random_read = Sequential;
+  // get_size is assigned a dummy value, all writer data will be read at once
+  int get_size = 0;
 
+  /*
+    if (strcmp(read_pattern, "random") == 0)
+      flag_read_pattern = Random;
+    else
+      flag_read_pattern = Sequential;
+  */
+  flag_read_pattern = Sequential;
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
 
@@ -398,7 +415,7 @@ int main(int argc, char **argv) {
 
   if (rank == 0) {
     printf("datasize_mb = %lu\n", datasize_mb);
-    printf("get_size = %lu\n", get_size);
+    // printf("get_size = %lu\n", get_size);
     printf("steps = %d\n", steps);
     printf("read_ratio = %d\n", read_ratio);
     printf("num_adios_var = %d\n", num_adios_var);
@@ -451,7 +468,7 @@ int main(int argc, char **argv) {
   /** the other tasks write the array */
   // array(datasize_mb, steps);
   read_data(datasize_mb, get_size, steps, 0 /* Async I/O flag False*/,
-            flag_random_read, read_ratio, num_adios_var);
+            flag_read_pattern, read_ratio, num_adios_var);
 
   /** close container */
   daos_cont_close(coh, NULL);

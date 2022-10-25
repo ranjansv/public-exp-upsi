@@ -308,14 +308,17 @@ int main(int argc, char **argv) {
   size_t datasize_mb = strtol(argv[3], NULL, 10);
   int put_size = strtol(argv[4], NULL, 10);
   int steps = strtol(argv[5], NULL, 10);
-  char *pattern = argv[6];
-  int num_adios_var = strtol(argv[7], NULL, 10);
+  // char *pattern = argv[6];
+  int num_adios_var = strtol(argv[6], NULL, 10);
   int pattern_flag = 0;
 
-  if (strcmp(pattern, "sequential") == 0)
-    pattern_flag = 0;
-  else
-    pattern_flag = 1;
+  /*
+    if (strcmp(pattern, "sequential") == 0)
+      pattern_flag = 0;
+    else
+      pattern_flag = 1;
+  */
+  pattern_flag = Sequence;
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -337,7 +340,6 @@ int main(int argc, char **argv) {
     printf("datasize_mb = %lu\n", datasize_mb);
     printf("put_size = %d\n", put_size);
     printf("steps = %d\n", steps);
-    printf("write pattern = %s\n", pattern);
     printf("num_adios_var = %d\n", num_adios_var);
   }
 

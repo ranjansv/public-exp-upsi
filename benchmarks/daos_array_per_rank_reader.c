@@ -195,13 +195,15 @@ void shuffle(int *array, size_t n) {
 }
 
 void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
-               int flag_random_read, int read_ratio) {
+               int flag_read_pattern, int read_ratio, int put_size,
+               int num_adios_var) {
   daos_handle_t th;
-  char *rbuf = NULL;
+  char *rbuf[num_adios_var];
   int rc;
   int iter;
-  int i, j;
+  int i, j, k;
   size_t elements_per_rank;
+  size_t elements_per_adios_var;
 
   FILE *fp;
   char buf[100];
@@ -212,9 +214,9 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
   daos_obj_id_t oids[read_ratio], oid;
   daos_handle_t oh[read_ratio];
-  daos_range_t *rg[read_ratio];
-  daos_array_iod_t iod[read_ratio];
-  d_sg_list_t sgl[read_ratio];
+  daos_range_t *rg[num_adios_var][read_ratio];
+  daos_array_iod_t iod[num_adios_var][read_ratio];
+  d_sg_list_t sgl[num_adios_var][read_ratio];
   d_iov_t iov;
   uint32_t oids_nr;
   uint64_t hi;
@@ -261,8 +263,13 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
 
   // Allocate memory for receive buffer
   elements_per_rank = datasize_mb * MB_in_bytes * read_ratio;
-  D_ALLOC_ARRAY(rbuf, elements_per_rank);
-  assert_non_null(rbuf);
+  elements_per_adios_var = elements_per_rank / num_adios_var;
+  for (i = 0; i < num_adios_var; i++) {
+    D_ALLOC_ARRAY(rbuf[i], elements_per_rank);
+    assert_non_null(rbuf[i]);
+  }
+
+  get_size = elements_per_rank;
 
   CALI_MARK_BEGIN("daos_array-reader:iterations");
 
@@ -307,49 +314,47 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     }
     CALI_MARK_END("daos_array-reader:open_array");
 
-    // Iteration through writers based on read_ratio, same as oids_nr
-    for (i = 0; i < oids_nr; i++) {
-      /** set array location */
-      uint64_t elements_from_each_writer = elements_per_rank / read_ratio;
-      iod[i].arr_nr = elements_from_each_writer / get_size;
-      rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
-      daos_off_t start_index = 0;
-      // daos_off_t start_index = rank * elements_per_rank / sizeof(char);
-      daos_size_t read_length = sizeof(char) * get_size;
+    for (i = 0; i < num_adios_var; i++) {
+      uint64_t elements_from_each_writer_per_var =
+          elements_per_adios_var / read_ratio;
+      size_t num_rg_per_writer = elements_from_each_writer_per_var / put_size;
 
-      // Array of offsets to choose at random. This array will track offset
-      // chosen
-      // so that we don't pick them again
-      int arr_offsets[iod[i].arr_nr];
+      // Parse all objects for this ADIOS var
+      for (j = 0; j < oids_nr; j++) {
+        daos_off_t read_index = i * put_size;
+        daos_size_t read_length = put_size;
+        iod[i][j].arr_nr = num_rg_per_writer;
+        rg[i][j] =
+            (daos_range_t *)malloc(num_rg_per_writer * sizeof(daos_range_t));
+        for (k = 0; k < num_rg_per_writer; k++) {
+          rg[i][j][k].rg_len = read_length;
+          rg[i][j][k].rg_idx = read_index;
+          read_index = read_index + num_adios_var * put_size;
+        }
+        iod[i][j].arr_rgs = rg[i][j];
 
-      for (j = 0; j < iod[i].arr_nr; j++)
-        arr_offsets[j] = j;
-
-      if (flag_random_read == Random)
-        shuffle(arr_offsets, iod[i].arr_nr);
-
-      for (j = 0; j < iod[i].arr_nr; j++) {
-        rg[i][j].rg_len = read_length;
-        rg[i][j].rg_idx = start_index + arr_offsets[j] * get_size;
+        /** set memory location */
+        sgl[i][j].sg_nr = 1;
+        d_iov_set(&iov, rbuf[i],
+                  elements_from_each_writer_per_var * sizeof(char));
+        sgl[i][j].sg_iovs = &iov;
       }
-      iod[i].arr_rgs = rg[i];
-
-      /** set memory location */
-      sgl[i].sg_nr = 1;
-      d_iov_set(&iov, rbuf + i * elements_from_each_writer,
-                elements_from_each_writer * sizeof(char));
-      sgl[i].sg_iovs = &iov;
     }
 
     CALI_MARK_BEGIN("daos_array-reader:read-time");
-    for (i = 0; i < oids_nr; i++) {
-      rc = daos_array_read(oh[i], th, &iod[i], &sgl[i], NULL);
-      ASSERT(rc == 0, "daos_array_read failed with %d", rc);
+    for (i = 0; i < num_adios_var; i++) {
+      for (j = 0; j < oids_nr; j++) {
+        rc = daos_array_read(oh[j], th, &iod[i][j], &sgl[i][j], NULL);
+        ASSERT(rc == 0, "daos_array_read failed with %d", rc);
+      }
     }
     CALI_MARK_END("daos_array-reader:read-time");
 
-    for (i = 0; i < oids_nr; i++)
-      free(rg[i]);
+    for (i = 0; i < num_adios_var; i++) {
+      for (j = 0; j < oids_nr; j++) {
+        free(rg[i][j]);
+      }
+    }
 
     CALI_MARK_BEGIN("daos_array-reader:close_array");
     for (i = 0; i < oids_nr; i++) {
@@ -362,7 +367,8 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
   }
   CALI_MARK_END("daos_array-reader:iterations");
 
-  D_FREE(rbuf);
+  for (i = 0; i < num_adios_var; i++)
+    D_FREE(rbuf[i]);
 }
 
 int main(int argc, char **argv) {
@@ -370,16 +376,21 @@ int main(int argc, char **argv) {
   uuid_parse(argv[1], pool_uuid);
   uuid_parse(argv[2], co_uuid);
   size_t datasize_mb = strtol(argv[3], NULL, 10);
-  size_t get_size = strtol(argv[4], NULL, 10);
-  int steps = strtol(argv[5], NULL, 10);
-  char *read_pattern = argv[6];
-  int read_ratio = strtol(argv[7], NULL, 10);
-  int flag_random_read;
+  int steps = strtol(argv[4], NULL, 10);
+  int read_ratio = strtol(argv[5], NULL, 10);
+  int put_size = strtol(argv[6], NULL, 10);
+  int num_adios_var = strtol(argv[7], NULL, 10);
+  int flag_read_pattern;
 
-  if (strcmp(read_pattern, "random") == 0)
-    flag_random_read = Random;
-  else
-    flag_random_read = Sequential;
+  // get_size is assigned a dummy value, all writer data will be read at once
+  int get_size = 0;
+  /*
+    if (strcmp(read_pattern, "random") == 0)
+      flag_read_pattern = Random;
+    else
+      flag_read_pattern = Sequential;
+  */
+  flag_read_pattern = Sequential;
 
   rc = gethostname(node, sizeof(node));
   ASSERT(rc == 0, "buffer for hostname too small");
@@ -399,10 +410,10 @@ int main(int argc, char **argv) {
 
   if (rank == 0) {
     printf("datasize_mb = %lu\n", datasize_mb);
-    printf("get_size = %lu\n", get_size);
     printf("steps = %d\n", steps);
-    printf("read_pattern = %s\n", read_pattern);
     printf("read_ratio = %d\n", read_ratio);
+    printf("put_size = %d\n", put_size);
+    printf("num_adios_var = %d\n", num_adios_var);
   }
 
   /** initialize the local DAOS stack */
@@ -452,7 +463,7 @@ int main(int argc, char **argv) {
   /** the other tasks write the array */
   // array(datasize_mb, steps);
   read_data(datasize_mb, get_size, steps, 0 /* Async I/O flag False*/,
-            flag_random_read, read_ratio);
+            flag_read_pattern, read_ratio, put_size, num_adios_var);
 
   /** close container */
   daos_cont_close(coh, NULL);

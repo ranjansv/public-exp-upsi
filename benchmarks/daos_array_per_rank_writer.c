@@ -144,7 +144,8 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t datasize_mb, int steps, int async, int put_size, int num_adios_var) {
+void write_data(size_t datasize_mb, int steps, int async, int put_size,
+                int num_adios_var) {
   daos_obj_id_t oid;
   daos_handle_t oh;
   daos_array_iod_t iod;
@@ -203,9 +204,9 @@ void write_data(size_t datasize_mb, int steps, int async, int put_size, int num_
     /** set array location */
     iod.arr_nr = elements_per_rank / put_size;
     rg = (daos_range_t *)malloc(iod.arr_nr * sizeof(daos_range_t));
-    for(i = 0; i < iod.arr_nr; i++)  {
-    rg[i].rg_len = put_size * sizeof(char) / cell_size;
-    rg[i].rg_idx = i * put_size;
+    for (i = 0; i < iod.arr_nr; i++) {
+      rg[i].rg_len = put_size * sizeof(char) / cell_size;
+      rg[i].rg_idx = i * put_size;
     }
     // rg.rg_idx = rank * rg.rg_len;
     iod.arr_rgs = rg;
@@ -278,6 +279,8 @@ int main(int argc, char **argv) {
   if (rank == 0) {
     printf("datasize_mb = %lu\n", datasize_mb);
     printf("steps = %d\n", steps);
+    printf("put_size = %d\n", put_size);
+    printf("num_adios_var = %d\n", num_adios_var);
   }
 
   /** initialize the local DAOS stack */
@@ -326,7 +329,8 @@ int main(int argc, char **argv) {
 
   /** the other tasks write the array */
   // array(datasize_mb, steps);
-  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/,put_size, num_adios_var);
+  write_data(datasize_mb, steps, 0 /* Async I/O flag False*/, put_size,
+             num_adios_var);
 
   /** close container */
   MPI_Barrier(MPI_COMM_WORLD);

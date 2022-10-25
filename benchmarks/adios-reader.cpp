@@ -32,8 +32,9 @@ int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   std::string engine_type = std::string(argv[1]);
   std::string filename = std::string(argv[2]);
-  size_t iosize_bytes = strtol(argv[3], NULL, 10);
-  std::string read_pattern = std::string(argv[4]);
+  size_t get_size;
+  //size_t get_size = strtol(argv[3], NULL, 10);
+  //std::string read_pattern = std::string(argv[4]);
   int rank, comm_size, wrank;
 
   bool flag_random_read;
@@ -49,6 +50,11 @@ int main(int argc, char *argv[]) {
 
   MPI_Comm_rank(comm, &rank);
   MPI_Comm_size(comm, &comm_size);
+
+  if (rank == 0) {
+     std::cout << "engine_type: " << engine_type << std::endl;
+     std::cout << "filename: " << filename << std::endl;
+  }
   // Init ADIOS
   adios2::ADIOS ad("adios2.xml", comm);
 
@@ -67,11 +73,13 @@ int main(int argc, char *argv[]) {
 
   // Perform Reads
   std::vector<std::size_t> shape;
-
+/*
   if(read_pattern == "random")
       flag_random_read = true;
   else
       flag_random_read = false;
+*/
+  flag_random_read = false;
 
 
   cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
@@ -118,7 +126,8 @@ int main(int argc, char *argv[]) {
       elements_per_rank = shape[0] - elements_per_rank * (comm_size - 1);
 
     if(iter == 1) {
-        arr_offsets.resize(elements_per_rank/iosize_bytes);
+        get_size = elements_per_rank;
+        arr_offsets.resize(elements_per_rank/get_size);
 
         for(int i = 0;i < arr_offsets.size(); i++)
             arr_offsets[i] = i;
@@ -130,9 +139,9 @@ int main(int argc, char *argv[]) {
     // Set selection
     int j = 0;
     while (offset < begin_offset + elements_per_rank) {
-      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + arr_offsets[j] * iosize_bytes }, { iosize_bytes }));
+      var_u_in.SetSelection(adios2::Box<adios2::Dims>({ begin_offset + arr_offsets[j] * get_size }, { get_size }));
       reader.Get<char>(var_u_in, u);
-      offset += iosize_bytes;
+      offset += get_size;
       j++;
     }
 

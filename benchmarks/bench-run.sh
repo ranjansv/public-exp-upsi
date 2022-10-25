@@ -107,10 +107,10 @@ for NR in $PROCS; do
 				mkdir -p $OUTPUT_DIR
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE $STEPS $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 
 						echo "Starting readers"
-					ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+					ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
 				fi
 			elif [ $ENG_TYPE == "daos_array_per_rank" ]; then
 				echo "Destroying previous containers, if any "
@@ -127,10 +127,10 @@ for NR in $PROCS; do
 				mkdir -p $OUTPUT_DIR
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS $PUT_SIZE $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 
 						echo "Starting readers"
-				        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+				        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $PUT_SIZE $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
 				fi
 
 			elif [ $ENG_TYPE == "adios+daos-posix" ]; then

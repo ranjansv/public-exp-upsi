@@ -24,7 +24,6 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb, int write
   global_array_size = local_size * procs;
   offset = rank * local_size;
 
-  //put_size = 33554432;
   put_size = write_size;
   num_blocks = local_size / put_size;
 
@@ -51,7 +50,8 @@ void Writer::write(int step, std::vector<char> &u) {
     var_array.SetSelection(
         adios2::Box<adios2::Dims>({ curr_offset }, { put_size }));
     writer.Put<char>(var_array, u.data());
-    curr_offset = curr_offset + 14 * put_size;
+    //curr_offset = curr_offset + 14 * put_size;
+    curr_offset = curr_offset + put_size;
     curr_offset = curr_offset % global_array_size;
   }
   writer.EndStep();
