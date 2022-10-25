@@ -169,10 +169,10 @@ for NR in $PROCS; do
 
 					if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
-						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-writer posix $FILENAME $DATASIZE $STEPS $PUT_SIZE &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-writer posix $FILENAME $DATASIZE $STEPS $PUT_SIZE $NUM_ADIOS_VAR  &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 
 						echo "Starting readers"
-					        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-reader posix $FILENAME &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+					        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-reader posix $FILENAME $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
 					fi
 
 					rm -rf $FILENAME/* &>/dev/null
