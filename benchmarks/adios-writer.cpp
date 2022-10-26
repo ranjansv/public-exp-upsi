@@ -18,8 +18,8 @@
 #undef ENABLE_TIMERS
 
 Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb,
-               int put_size, int num_adios_var)
-    : io(io), num_adios_var(num_adios_var), put_size(put_size) {
+              size_t put_size, int num_adios_var)
+    : io(io), put_size(put_size), num_adios_var(num_adios_var) {
 
   elements_per_rank = datasize_mb * MB_in_bytes / sizeof(char);
   global_array_size = elements_per_rank * procs;
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
   try {
     adios2::ADIOS adios("./adios2.xml", comm);
     adios2::IO io_handle = adios.DeclareIO(engine_type);
-    Writer writer(io_handle, rank, procs, datasize_mb, put_size);
+    Writer writer(io_handle, rank, procs, datasize_mb, put_size, num_adios_var);
 
 
     writer.open(filename);

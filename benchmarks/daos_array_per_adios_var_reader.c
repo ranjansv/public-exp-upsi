@@ -311,7 +311,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     uint64_t elements_per_adios_var = elements_per_rank / num_adios_var;
     /** set array location */
     for (i = 0; i < num_adios_var; i++) {
-      iod[i].arr_nr = 1
+      iod[i].arr_nr = 1;
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
       daos_off_t start_index = rank * elements_per_adios_var / sizeof(char);
       daos_size_t read_length = elements_per_adios_var;

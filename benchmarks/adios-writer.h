@@ -19,8 +19,8 @@ class Writer {
   int my_rank;
 
 public:
-  Writer(adios2::IO, int, int, size_t, int);
+  Writer(adios2::IO, int, int, size_t, size_t, int);
   void open(const std::string &fname);
-  void write(int step, std::vector<char> &);
+  void write(int step);
   void close();
 };
