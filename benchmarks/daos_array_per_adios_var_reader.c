@@ -288,8 +288,9 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     rc = MPI_Bcast(&epochs[iter], 1, MPI_UINT64_T, 0, MPI_COMM_WORLD);
     assert_int_equal(rc, MPI_SUCCESS);
     CALI_MARK_END("daos_array-reader:get_epochid");
-
-    printf("iter %d rank %d epoch: %lu\n", iter + 1, rank, epochs[iter]);
+   
+    if(!rank)
+    printf("iter %d epoch: %lu\n", iter + 1, epochs[iter]);
 
     CALI_MARK_BEGIN("daos_array-reader:open_snap");
     rc = daos_tx_open_snap(coh, epochs[iter], &th, NULL);
@@ -309,13 +310,14 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
        printf("daos_array_open() complete\n");
 
     uint64_t elements_per_adios_var = elements_per_rank / num_adios_var;
+    daos_off_t start_index = rank * elements_per_adios_var / sizeof(char);
+    daos_size_t read_length = elements_per_adios_var;
     /** set array location */
     for (i = 0; i < num_adios_var; i++) {
       iod[i].arr_nr = 1;
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
-      daos_off_t start_index = rank * elements_per_adios_var / sizeof(char);
-      daos_size_t read_length = elements_per_adios_var;
 
+/*
       // Array of offsets to choose at random. This array will track offset
       // chosen so that we don't pick them again
       int arr_offsets[iod[i].arr_nr];
@@ -326,14 +328,13 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
       if (flag_read_pattern == Random)
         shuffle(arr_offsets, iod[i].arr_nr);
 
-/*
       for (j = 0; j < iod[i].arr_nr; j++) {
         rg[i][j].rg_len = read_length;
         rg[i][j].rg_idx = start_index + arr_offsets[j] * get_size;
       }
 */
-      rg[i][0].rg_len = elements_per_adios_var;
-      rg[i][0].rg_idx = start_index;
+      rg[i]->rg_len = elements_per_adios_var;
+      rg[i]->rg_idx = start_index;
       iod[i].arr_rgs = rg[i];
 
       /** set memory location */
@@ -344,7 +345,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     }
 
     if(!rank)
-      printf("Filled up IOD and SGL\n");
+      printf("Filled up IOD and SGL for all ADIOS vars\n");
 
 
     CALI_MARK_BEGIN("daos_array-reader:read-time");
@@ -357,10 +358,10 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
     if(!rank)
        printf("daos_array_read() complete\n");
 
-    free(rg);
 
     CALI_MARK_BEGIN("daos_array-reader:close_array");
     for (i = 0; i < num_adios_var; i++) {
+      free(rg[i]);
       rc = daos_array_close(oh[i], NULL);
       ASSERT(rc == 0, "daos_array_close failed with %d", rc);
     }

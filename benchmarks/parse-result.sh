@@ -45,29 +45,29 @@ for NR in $PROCS; do
 		echo -n "io_size" >$OUTPUT_FILE
 		echo ",$ENGINE" >>$OUTPUT_FILE
 		sed -i 's/\s/,/g' $OUTPUT_FILE
-		for IOSIZE in $READ_IO_SIZE; do
-			echo -n "$IOSIZE" >>$OUTPUT_FILE
+		#for IOSIZE in $READ_IO_SIZE; do
+			#echo -n "$IOSIZE" >>$OUTPUT_FILE
 			for IO_NAME in $ENGINE; do
 				if [ $IO_NAME == "daos_array_per_adios_var" ]; then
-					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
+					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "daos_array_per_rank" ]; then
-					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
+					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "adios+daos-posix" ]; then
 					ADIOS_XML=$AGGREGATORS
-					READ_TIME=$(grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-readers-iosize-$IOSIZE.log | awk '{printf "%.2f", $4}')
+					READ_TIME=$(grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "ior+daos-posix" ]; then
-					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-readers-iosize-$IOSIZE.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
+					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-readers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				elif [ $IO_NAME == "ior+dfs" ]; then
-					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers-iosize-$IOSIZE.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
+					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
 					echo -n ",$READ_TIME" >>$OUTPUT_FILE
 				fi
 			done
 			echo "" >>$OUTPUT_FILE
-		done
+		#done
 	done
 done
 
