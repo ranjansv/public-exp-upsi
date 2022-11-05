@@ -148,7 +148,7 @@ static void array_oh_share(daos_handle_t *oh) {
   MPI_Barrier(MPI_COMM_WORLD);
 }
 
-void write_data(size_t datasize_mb, int put_size, int steps, int async,
+void write_data(size_t datasize_mb, size_t put_size, int steps, int async,
                 int pattern_flag, int num_adios_var) {
   daos_obj_id_t oid[num_adios_var];
   daos_handle_t oh[num_adios_var];
@@ -219,14 +219,14 @@ void write_data(size_t datasize_mb, int put_size, int steps, int async,
 
   CALI_MARK_BEGIN("daos_array-writer:iterations");
 
+  uint64_t elements_per_adios_var_per_rank =
+          elements_per_rank / num_adios_var;
   for (iter = 0; iter < steps; iter++) {
     /** set array location */
     for (i = 0; i < num_adios_var; i++) {
-      uint64_t elements_per_adios_var_per_rank =
-          elements_per_rank / num_adios_var;
       iod[i].arr_nr = elements_per_adios_var_per_rank / put_size;
       rg[i] = (daos_range_t *)malloc(iod[i].arr_nr * sizeof(daos_range_t));
-      daos_off_t start_index = rank * elements_per_rank / sizeof(char);
+      daos_off_t start_index = rank * elements_per_adios_var_per_rank / sizeof(char);
       daos_size_t write_length = sizeof(char) * put_size;
 
       int arr_offsets[iod[i].arr_nr];
@@ -244,7 +244,7 @@ void write_data(size_t datasize_mb, int put_size, int steps, int async,
 
       /** set memory location */
       sgl[i].sg_nr = 1;
-      d_iov_set(&iov, wbuf, elements_per_adios_var_per_rank * sizeof(char));
+      d_iov_set(&iov, wbuf + i * elements_per_adios_var_per_rank, elements_per_adios_var_per_rank * sizeof(char));
       sgl[i].sg_iovs = &iov;
     }
 

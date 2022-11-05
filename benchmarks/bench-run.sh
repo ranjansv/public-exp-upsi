@@ -35,6 +35,7 @@ cd ..
 
 #Copy configs and xml to outputdir
 cp ${CONFIG_FILE} $RESULT_DIR/config.sh
+PUT_SIZE_BYTES=`numfmt --from=iec $PUT_SIZE`
 
 SCRIPT_NAME="bench-run.sh"
 cp ./$SCRIPT_NAME $RESULT_DIR/
@@ -87,7 +88,7 @@ for NR in $PROCS; do
 		for DATASIZE in $DATA_PER_RANK; do
 			echo ""
 			echo ""
-			echo "Processing ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb with $NR writers and $NR_READERS readers"
+			echo "Processing ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb with $NR writers and $NR_READERS readers, PUT_SIZE: $PUT_SIZE"
 			#Choose PROCS and STEPS so that global array size is a whole numebr
 			GLOBAL_ARRAY_SIZE=$(echo "scale=0; $DATASIZE * ($NR)" | bc)
 			echo "global array size: $GLOBAL_ARRAY_SIZE"
@@ -107,7 +108,7 @@ for NR in $PROCS; do
 				mkdir -p $OUTPUT_DIR
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE $STEPS $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE_BYTES $STEPS $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 
 						echo "Starting readers"
 					ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
@@ -127,10 +128,10 @@ for NR in $PROCS; do
 				mkdir -p $OUTPUT_DIR
 				if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
-					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS $PUT_SIZE $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS $PUT_SIZE_BYTES $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 
 						echo "Starting readers"
-				        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $PUT_SIZE $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+				        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $PUT_SIZE_BYTES $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
 				fi
 
 			elif [ $ENG_TYPE == "adios+daos-posix" ]; then
@@ -169,7 +170,7 @@ for NR in $PROCS; do
 
 					if [ $BENCH_TYPE == "writer-reader" ]; then
 						echo "Starting writers"
-						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-writer posix $FILENAME $DATASIZE $STEPS $PUT_SIZE $NUM_ADIOS_VAR  &>>$OUTPUT_DIR/stdout-mpirun-writers.log
+						ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-writer posix $FILENAME $DATASIZE $STEPS $PUT_SIZE_BYTES $NUM_ADIOS_VAR  &>>$OUTPUT_DIR/stdout-mpirun-writers.log
 
 						echo "Starting readers"
 					        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-reader posix $FILENAME $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log

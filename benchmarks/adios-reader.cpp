@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
   adios2::IO reader_io = ad.DeclareIO(engine_type);
 
   // Declare variables
-  std::vector<std::vector<char>> u;
+  std::vector<std::vector<char> > u;
   int step;
   adios2::Variable<char> *var_u_in;
   adios2::Variable<int> var_step_in;
@@ -106,25 +106,29 @@ int main(int argc, char *argv[]) {
 
     // Inquire variable
     char buf[10];
-    for(int i = 0; i < num_adios_var; i++) {
-    sprintf(buf,"U%d", i + 1);
-    var_u_in[i] = reader_io.InquireVariable<char>(buf);
+    for (int i = 0; i < num_adios_var; i++) {
+      sprintf(buf, "U%d", i + 1);
+      var_u_in[i] = reader_io.InquireVariable<char>(buf);
     }
     var_step_in = reader_io.InquireVariable<int>("step");
 
-    //Assumes all ADIOS variables have the same shape
+    // Assumes all ADIOS variables have the same shape
     shape = var_u_in[0].Shape();
 
     size_t elements_per_adios_var_per_rank = shape[0] / comm_size;
     size_t read_length = elements_per_adios_var_per_rank;
     size_t offset = elements_per_adios_var_per_rank * rank;
 
-    for(int i = 0; i < num_adios_var; i++) {
-            u[i].resize(read_length);
-            var_u_in[i].SetSelection(adios2::Box<adios2::Dims>(
-              {offset}, {read_length}));
-	      reader.Get<char>(var_u_in[i], u[i]);
+    if(!rank) {
+       std::cout << "iter: " << iter;
+       std::cout << ", elements_per_adios_var_per_rank: " << elements_per_adios_var_per_rank << std::endl;
+    }
 
+    for (int i = 0; i < num_adios_var; i++) {
+      u[i].resize(read_length);
+      var_u_in[i]
+          .SetSelection(adios2::Box<adios2::Dims>({ offset }, { read_length }));
+      reader.Get<char>(var_u_in[i], u[i]);
     }
 
     /*
@@ -132,7 +136,8 @@ int main(int argc, char *argv[]) {
     size_t offset = begin_offset;
 
     if (rank == comm_size - 1)
-      elements_per_adios_var_per_rank = shape[0] - elements_per_adios_var_per_rank * (comm_size - 1);
+      elements_per_adios_var_per_rank = shape[0] -
+    elements_per_adios_var_per_rank * (comm_size - 1);
 
     if (iter == 1) {
       get_size = elements_per_adios_var_per_rank;

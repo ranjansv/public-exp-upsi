@@ -41,10 +41,14 @@ fi
 #Compare Readtime
 for NR in $PROCS; do
 	for DATASIZE in $DATA_PER_RANK; do
-		OUTPUT_FILE="${RESULT_DIR}/csv/comparereadtime-${NR}ranks-${DATASIZE}mb.csv"
-		echo -n "io_size" >$OUTPUT_FILE
-		echo ",$ENGINE" >>$OUTPUT_FILE
+               NR_READERS=$(echo "scale=0; $NR/$READ_WRITE_RATIO" | bc)
+               DATA_READ_PER_ITER=$(echo "scale=0; $DATASIZE * $READ_WRITE_RATIO" | bc)
+		OUTPUT_FILE="${RESULT_DIR}/csv/comparereadtime-${NR_READERS}ranks-${DATA_READ_PER_ITER}mb-putsize${PUT_SIZE}.csv"
+		#echo -n "io_size" >$OUTPUT_FILE
+		#echo ",$ENGINE" >>$OUTPUT_FILE
+		echo "put_size,$ENGINE" >$OUTPUT_FILE
 		sed -i 's/\s/,/g' $OUTPUT_FILE
+		echo -n "$PUT_SIZE" >> $OUTPUT_FILE
 		#for IOSIZE in $READ_IO_SIZE; do
 			#echo -n "$IOSIZE" >>$OUTPUT_FILE
 			for IO_NAME in $ENGINE; do
@@ -74,11 +78,10 @@ done
 #Compare Writetime
 for NR in $PROCS; do
         for DATASIZE in $DATA_PER_RANK; do
-                OUTPUT_FILE="${RESULT_DIR}/csv/comparewritetime-${NR}ranks-${DATASIZE}mb.csv"
-                echo -n "datasize" >$OUTPUT_FILE
-                echo ",$ENGINE" >>$OUTPUT_FILE
+                OUTPUT_FILE="${RESULT_DIR}/csv/comparewritetime-${NR}ranks-${DATASIZE}mb-putsize${PUT_SIZE}.csv"
+                echo "put_size,$ENGINE" >$OUTPUT_FILE
                 sed -i 's/\s/,/g' $OUTPUT_FILE
-                echo -n $DATASIZE >> $OUTPUT_FILE
+                echo -n "$PUT_SIZE" >> $OUTPUT_FILE
                         for IO_NAME in $ENGINE; do
                                 if [ $IO_NAME == "daos_array_per_adios_var" ]; then
                                         WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')

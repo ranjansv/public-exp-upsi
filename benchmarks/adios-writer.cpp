@@ -18,16 +18,16 @@
 #undef ENABLE_TIMERS
 
 Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb,
-              size_t put_size, int num_adios_var)
+               size_t put_size, int num_adios_var)
     : io(io), put_size(put_size), num_adios_var(num_adios_var) {
 
   elements_per_rank = datasize_mb * MB_in_bytes / sizeof(char);
-  global_array_size = elements_per_rank * procs;
   elements_per_adios_var_per_rank = elements_per_rank / num_adios_var;
+  global_array_size = elements_per_adios_var_per_rank * procs;
 
   num_blocks_per_adios_var = elements_per_adios_var_per_rank / put_size;
 
-  var_array = new adios2::Variable<char>[ num_adios_var ];
+  var_array = new adios2::Variable<char>[num_adios_var];
 
   char buf[10];
 
@@ -37,7 +37,7 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb,
     sprintf(buf, "U%d", i + 1);
     var_array[i] = io.DefineVariable<char>(buf, {global_array_size},
                                            adios2::Dims(), adios2::Dims());
-   u[i].resize(elements_per_adios_var_per_rank);
+    u[i].resize(elements_per_adios_var_per_rank);
   }
   var_step = io.DefineVariable<int>("step");
 
@@ -48,7 +48,6 @@ void Writer::open(const std::string &fname) {
   writer = io.Open(fname, adios2::Mode::Write);
 }
 
-
 void Writer::write(int step) {
 
   writer.BeginStep();
@@ -57,7 +56,7 @@ void Writer::write(int step) {
   for (int i = 0; i < num_blocks_per_adios_var; i++) {
     for (int j = 0; j < num_adios_var; j++) {
       var_array[j].SetSelection(
-          adios2::Box<adios2::Dims>({curr_offset}, {put_size}));
+          adios2::Box<adios2::Dims>({ curr_offset }, { put_size }));
       writer.Put<char>(var_array[j], u[j].data());
     }
     curr_offset = curr_offset + put_size;
@@ -99,9 +98,7 @@ int main(int argc, char *argv[]) {
     adios2::IO io_handle = adios.DeclareIO(engine_type);
     Writer writer(io_handle, rank, procs, datasize_mb, put_size, num_adios_var);
 
-
     writer.open(filename);
-
 
     cali_config_set("CALI_CALIPER_ATTRIBUTE_DEFAULT_SCOPE", "process");
 
@@ -119,7 +116,8 @@ int main(int argc, char *argv[]) {
     }
     writer.close();
     CALI_MARK_END("writer:iterations");
-  } catch (std::exception &e) {
+  }
+  catch (std::exception &e) {
     std::cout << "ERROR: ADIOS2 exception: " << e.what() << "\n";
     MPI_Abort(MPI_COMM_WORLD, -1);
   }

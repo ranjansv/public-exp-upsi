@@ -265,7 +265,7 @@ void read_data(size_t datasize_mb, size_t get_size, int steps, int async,
   elements_per_rank = datasize_mb * MB_in_bytes * read_ratio;
   elements_per_adios_var = elements_per_rank / num_adios_var;
   for (i = 0; i < num_adios_var; i++) {
-    D_ALLOC_ARRAY(rbuf[i], elements_per_rank);
+    D_ALLOC_ARRAY(rbuf[i], elements_per_adios_var);
     assert_non_null(rbuf[i]);
   }
 
