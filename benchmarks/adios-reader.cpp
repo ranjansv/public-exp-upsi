@@ -119,9 +119,10 @@ int main(int argc, char *argv[]) {
     size_t read_length = elements_per_adios_var_per_rank;
     size_t offset = elements_per_adios_var_per_rank * rank;
 
-    if(!rank) {
-       std::cout << "iter: " << iter;
-       std::cout << ", elements_per_adios_var_per_rank: " << elements_per_adios_var_per_rank << std::endl;
+    if (!rank) {
+      std::cout << "iter: " << iter;
+      std::cout << ", elements_per_adios_var_per_rank: "
+                << elements_per_adios_var_per_rank << std::endl;
     }
 
     for (int i = 0; i < num_adios_var; i++) {

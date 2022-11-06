@@ -35,7 +35,7 @@ Writer::Writer(adios2::IO io, int rank, int procs, size_t datasize_mb,
   for (int i = 0; i < num_adios_var; i++) {
 
     sprintf(buf, "U%d", i + 1);
-    var_array[i] = io.DefineVariable<char>(buf, {global_array_size},
+    var_array[i] = io.DefineVariable<char>(buf, { global_array_size },
                                            adios2::Dims(), adios2::Dims());
     u[i].resize(elements_per_adios_var_per_rank);
   }
