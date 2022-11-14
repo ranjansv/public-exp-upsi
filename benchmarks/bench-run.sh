@@ -179,6 +179,9 @@ for NR in $PROCS; do
 					rm -rf $FILENAME/* &>/dev/null
 
 				done
+
+				echo "Listing files"
+				ls -lh /tmp/dfuse/*
 				echo "Unmounting daos-posix"
 				export TACC_TASKS_PER_NODE=1
 				ibrun -np $SLURM_JOB_NUM_NODES fusermount3 -u $MOUNTPOINT
