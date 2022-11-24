@@ -7,7 +7,7 @@ rm -f /tmp/daos_client.log
 
 export DAOS_AGENT_LOG=/tmp/daos_agent.log
 
-export DAOS_AGENT_CONF=/work2/08126/dbohninx/frontera/4NODE/BUILDS/files/daos_agent.yml
+export DAOS_AGENT_CONF=`sed 's/control/agent/g' <<< "$daos_config"`
 
 export DAOS_AGENT_DIR=/tmp/daos_agent/
 

@@ -39,70 +39,73 @@ if [ $BENCH_TYPE == "workflow" ]; then
 fi
 
 #Compare Readtime
-for NR in $PROCS; do
-	for DATASIZE in $DATA_PER_RANK; do
-               NR_READERS=$(echo "scale=0; $NR/$READ_WRITE_RATIO" | bc)
-               DATA_READ_PER_ITER=$(echo "scale=0; $DATASIZE * $READ_WRITE_RATIO" | bc)
-		OUTPUT_FILE="${RESULT_DIR}/csv/comparereadtime-${NR_READERS}ranks-${DATA_READ_PER_ITER}mb-putsize${PUT_SIZE}.csv"
-		#echo -n "io_size" >$OUTPUT_FILE
-		#echo ",$ENGINE" >>$OUTPUT_FILE
-		echo "put_size,$ENGINE" >$OUTPUT_FILE
-		sed -i 's/\s/,/g' $OUTPUT_FILE
-		echo -n "$PUT_SIZE" >> $OUTPUT_FILE
-		#for IOSIZE in $READ_IO_SIZE; do
-			#echo -n "$IOSIZE" >>$OUTPUT_FILE
-			for IO_NAME in $ENGINE; do
-				if [ $IO_NAME == "daos_array_per_adios_var" ]; then
-					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
-					echo -n ",$READ_TIME" >>$OUTPUT_FILE
-				elif [ $IO_NAME == "daos_array_per_rank" ]; then
-					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
-					echo -n ",$READ_TIME" >>$OUTPUT_FILE
-				elif [ $IO_NAME == "adios+daos-posix" ]; then
-					ADIOS_XML=$AGGREGATORS
-					READ_TIME=$(grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
-					echo -n ",$READ_TIME" >>$OUTPUT_FILE
-				elif [ $IO_NAME == "ior+daos-posix" ]; then
-					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-readers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
-					echo -n ",$READ_TIME" >>$OUTPUT_FILE
-				elif [ $IO_NAME == "ior+dfs" ]; then
-					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-readers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
-					echo -n ",$READ_TIME" >>$OUTPUT_FILE
-				fi
-			done
-			echo "" >>$OUTPUT_FILE
-		#done
-	done
+    for NR in $PROCS; do
+    	for DATASIZE in $DATA_PER_RANK; do
+                   NR_READERS=$(echo "scale=0; $NR/$READ_WRITE_RATIO" | bc)
+                   DATA_READ_PER_ITER=$(echo "scale=0; $DATASIZE * $READ_WRITE_RATIO" | bc)
+    		OUTPUT_FILE="${RESULT_DIR}/csv/comparereadtime-${NR_READERS}ranks-${DATA_READ_PER_ITER}mb.csv"
+    		#echo -n "io_size" >$OUTPUT_FILE
+    		#echo ",$ENGINE" >>$OUTPUT_FILE
+    		echo "num_adios_var,$ENGINE" >$OUTPUT_FILE
+    		sed -i 's/\s/,/g' $OUTPUT_FILE
+    		#for IOSIZE in $READ_IO_SIZE; do
+    			#echo -n "$IOSIZE" >>$OUTPUT_FILE
+                for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
+    		echo -n "$NUM_ADIOS_VAR" >> $OUTPUT_FILE
+    			for IO_NAME in $ENGINE; do
+    				if [ $IO_NAME == "daos_array_per_adios_var" ]; then
+    					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
+    					echo -n ",$READ_TIME" >>$OUTPUT_FILE
+    				elif [ $IO_NAME == "daos_array_per_rank" ]; then
+    					READ_TIME=$(grep 'read-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
+    					echo -n ",$READ_TIME" >>$OUTPUT_FILE
+    				elif [ $IO_NAME == "adios+daos-posix" ]; then
+    					ADIOS_XML=$AGGREGATORS
+    					READ_TIME=$(grep ':endstep' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/$NUM_ADIOS_VAR/stdout-mpirun-readers.log | awk '{printf "%.2f", $4}')
+    					echo -n ",$READ_TIME" >>$OUTPUT_FILE
+    				elif [ $IO_NAME == "ior+daos-posix" ]; then
+    					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/$NUM_ADIOS_VAR/stdout-mpirun-readers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
+    					echo -n ",$READ_TIME" >>$OUTPUT_FILE
+    				elif [ $IO_NAME == "ior+dfs" ]; then
+    					READ_TIME=$(grep '^read' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/$NUM_ADIOS_VAR/stdout-mpirun-readers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
+    					echo -n ",$READ_TIME" >>$OUTPUT_FILE
+    				fi
+    			done
+    			echo "" >>$OUTPUT_FILE
+    		#done
+    	done
+    done
 done
-
 #Compare Writetime
 for NR in $PROCS; do
         for DATASIZE in $DATA_PER_RANK; do
-                OUTPUT_FILE="${RESULT_DIR}/csv/comparewritetime-${NR}ranks-${DATASIZE}mb-putsize${PUT_SIZE}.csv"
-                echo "put_size,$ENGINE" >$OUTPUT_FILE
+                OUTPUT_FILE="${RESULT_DIR}/csv/comparewritetime-${NR}ranks-${DATASIZE}mb.csv"
+                echo "num_adios_var,$ENGINE" >$OUTPUT_FILE
                 sed -i 's/\s/,/g' $OUTPUT_FILE
-                echo -n "$PUT_SIZE" >> $OUTPUT_FILE
+		for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
+                echo -n "$NUM_ADIOS_VAR" >> $OUTPUT_FILE
                         for IO_NAME in $ENGINE; do
                                 if [ $IO_NAME == "daos_array_per_adios_var" ]; then
-                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
+                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "daos_array_per_rank" ]; then
-                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
+                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "adios+daos-posix" ]; then
                                         ADIOS_XML=$AGGREGATORS
-                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
+                                        WRITE_TIME=$(grep 'write-time' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/$NUM_ADIOS_VAR/stdout-mpirun-writers.log | awk '{printf "%.2f", $4}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "ior+daos-posix" ]; then
-                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
+                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+daos-posix/$NUM_ADIOS_VAR/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}')
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 elif [ $IO_NAME == "ior+dfs" ]; then
-                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}') 
+                                        WRITE_TIME=$(grep '^write' $RESULT_DIR/${NR}ranks/${DATASIZE}mb/ior+dfs/$NUM_ADIOS_VAR/stdout-mpirun-writers.log | head -$STEPS | awk 'BEGIN{sum = 0} {sum += $8} END {printf "%.2f", sum}') 
                                         echo -n ",$WRITE_TIME" >>$OUTPUT_FILE
                                 fi
                         done
                         echo "" >>$OUTPUT_FILE
         done
+done
 done
 
 mkdir -p export-${RESULT_DIR}
