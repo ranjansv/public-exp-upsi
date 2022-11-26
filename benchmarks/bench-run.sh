@@ -19,7 +19,11 @@ echo "Result dir: $RESULT_DIR"
 echo "ADIOS branch"
 cd /home1/08059/ranjansv/ADIOS2/
 git branch
+git log | head
 cd -
+
+daos version
+echo "daos_config: $daos_config"
 
 rm results/latest
 ln -s $TIMESTAMP results/latest
@@ -58,8 +62,7 @@ sleep 6
 
 echo "benchmark type: $BENCH_TYPE"
 
-for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
-    for NR in $PROCS; do
+for NR in $PROCS; do
     	offset=$NR
     
     	NR_READERS=$(echo "scale=0; $NR/$READ_WRITE_RATIO" | bc)
@@ -86,6 +89,7 @@ for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     		fi
     
     		for DATASIZE in $DATA_PER_RANK; do
+		    for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     			echo ""
     			echo ""
     			echo "Processing $NUM_ADIOS_VAR vars, ${ENG_TYPE}:${FILENAME}, ${DATASIZE}mb with $NR writers and $NR_READERS readers"
@@ -108,7 +112,7 @@ for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     				echo "0" >share/oid_part_count.txt
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID | grep -i 'created container' | awk '{print $4}')
     				echo "New container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
     						echo "Starting writers"
@@ -128,7 +132,7 @@ for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     				echo "0" >share/oid_part_count.txt
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID | grep -i 'created container' | awk '{print $4}')
     				echo "New container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
     						echo "Starting writers"
@@ -164,7 +168,7 @@ for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     					echo ""
     					echo "Aggregator: $ADIOS_XML"
     					cp adios-config/${ADIOS_XML}.xml adios2.xml
-    					OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/$NUM_ADIOS_VAR"
+    					OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}${NUM_ADIOS_VAR}vars"
     
     					#Save ADIOS config for each aggregator
     					mkdir -p $OUTPUT_DIR
@@ -197,7 +201,7 @@ for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     				daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID --type=POSIX | grep -i 'created container' | awk '{print $4}')
     				echo "New POSIX container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     
     				echo ""
@@ -239,7 +243,7 @@ for NUM_ADIOS_VAR in $LIST_NUM_ADIOS_VAR; do
     				daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID --type=POSIX | grep -i 'created container' | awk '{print $4}')
     				echo "New POSIX container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/$NUM_ADIOS_VAR"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
     					echo "Starting IOR writers"
