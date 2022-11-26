@@ -132,7 +132,7 @@ for NR in $PROCS; do
     				echo "0" >share/oid_part_count.txt
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID | grep -i 'created container' | awk '{print $4}')
     				echo "New container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}${NUM_ADIOS_VAR}vars"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
     						echo "Starting writers"
@@ -168,7 +168,7 @@ for NR in $PROCS; do
     					echo ""
     					echo "Aggregator: $ADIOS_XML"
     					cp adios-config/${ADIOS_XML}.xml adios2.xml
-    					OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}${NUM_ADIOS_VAR}vars"
+    					OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${ADIOS_XML}/${NUM_ADIOS_VAR}vars"
     
     					#Save ADIOS config for each aggregator
     					mkdir -p $OUTPUT_DIR
@@ -201,7 +201,7 @@ for NR in $PROCS; do
     				daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID --type=POSIX | grep -i 'created container' | awk '{print $4}')
     				echo "New POSIX container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}${NUM_ADIOS_VAR}vars"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     
     				echo ""
@@ -243,7 +243,7 @@ for NR in $PROCS; do
     				daos pool list-cont --pool=$POOL_UUID | sed -e '1,2d' | awk '{print $1}' | xargs -L 1 -I '{}' sh -c "daos cont destroy --cont={} --pool=$POOL_UUID --force"
     				CONT_UUID=$(daos cont create --pool=$POOL_UUID --type=POSIX | grep -i 'created container' | awk '{print $4}')
     				echo "New POSIX container UUID: $CONT_UUID"
-    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}${NUM_ADIOS_VAR}vars"
+    				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
     					echo "Starting IOR writers"
