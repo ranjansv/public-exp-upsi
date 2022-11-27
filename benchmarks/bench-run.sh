@@ -22,8 +22,6 @@ git branch
 git log | head
 cd -
 
-daos version
-echo "daos_config: $daos_config"
 
 rm results/latest
 ln -s $TIMESTAMP results/latest
@@ -31,6 +29,10 @@ ln -s $TIMESTAMP results/latest
 #mount > $RESULT_DIR/fs-mounts.log
 git branch --show-current >$RESULT_DIR/git.log
 git log --format="%H" -n 1 >>$RESULT_DIR/git.log
+
+daos version
+echo "daos_config: $daos_config"
+daos version > $RESULT_DIR/daos_version.log
 
 #Build source
 cd build
