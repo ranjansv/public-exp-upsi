@@ -117,11 +117,12 @@ for NR in $PROCS; do
     				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
-    						echo "Starting writers"
+    					echo "Starting writers"
     					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_writer $POOL_UUID $CONT_UUID $DATASIZE $PUT_SIZE_BYTES $STEPS $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
     
-    						echo "Starting readers"
+    					echo "Starting readers"
     					ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_adios_var_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+					dmg -o $daos_config pool list --verbose &> $OUTPUT_DIR/pool_list.txt
     				fi
     			elif [ $ENG_TYPE == "daos_array_per_rank" ]; then
     				echo "Destroying previous containers, if any "
@@ -137,11 +138,12 @@ for NR in $PROCS; do
     				OUTPUT_DIR="$RESULT_DIR/${NR}ranks/${DATASIZE}mb/${IO_NAME}/${NUM_ADIOS_VAR}vars"
     				mkdir -p $OUTPUT_DIR
     				if [ $BENCH_TYPE == "writer-reader" ]; then
-    						echo "Starting writers"
+    					echo "Starting writers"
     					ibrun -o 0 -n $NR numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_writer $POOL_UUID $CONT_UUID $DATASIZE $STEPS $PUT_SIZE_BYTES $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-writers.log
     
-    						echo "Starting readers"
+    					echo "Starting readers"
     				        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive build/daos_array_per_rank_reader $POOL_UUID $CONT_UUID $DATASIZE $STEPS $READ_WRITE_RATIO $PUT_SIZE_BYTES $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+					dmg -o $daos_config pool list --verbose &> $OUTPUT_DIR/pool_list.txt
     				fi
     
     			elif [ $ENG_TYPE == "adios+daos-posix" ]; then
@@ -184,6 +186,7 @@ for NR in $PROCS; do
     
     						echo "Starting readers"
     					        ibrun -o 0 -n $NR_READERS numactl --cpunodebind=0 --preferred=0 env CALI_CONFIG=runtime-report,calc.inclusive LD_PRELOAD=$PRELOAD_LIBPATH build/adios-reader posix $FILENAME $NUM_ADIOS_VAR &>>$OUTPUT_DIR/stdout-mpirun-readers.log
+					dmg -o $daos_config pool list --verbose &> $OUTPUT_DIR/pool_list.txt
     					fi
     
     					rm -rf $FILENAME/* &>/dev/null
